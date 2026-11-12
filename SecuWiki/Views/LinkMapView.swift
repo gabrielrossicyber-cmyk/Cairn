@@ -3,44 +3,97 @@ import SwiftUI
 /// Carte des liens de la page ouverte (Cmd+Maj+M).
 ///
 ///     Mentionnée dans  ──▶  [ PAGE ]  ──▶  Renvoie vers
-///                              │
-///                        Mêmes tags (#iam…)
+///                              ┆
+///                         Mêmes tags
 ///
-/// Un clic sur une page recentre la carte sur elle ; « Lire la page » (Échap) revient au texte.
+/// Un clic sur une page recentre la carte sur elle ; le fil en haut garde le parcours.
+/// « Lire la page » (Échap) revient au texte.
 struct LinkMapView: View {
     @Environment(WikiStore.self) private var store
+    /// Pages visitées depuis l'ouverture de la carte (fil d'Ariane cliquable).
+    @State private var trail: [URL] = []
 
     var body: some View {
         VStack(spacing: 0) {
             header
             Divider()
-            if let url = store.openURL, let map = store.linkMap(for: url) {
-                ScrollView([.vertical, .horizontal]) {
-                    MapCanvas(map: map)
-                        .padding(36)
-                        .frame(maxWidth: .infinity)
+            ZStack {
+                DotGrid()
+                if let url = store.openURL, let map = store.linkMap(for: url) {
+                    ScrollView([.vertical, .horizontal]) {
+                        MapCanvas(map: map)
+                            .id(map.center.url)
+                            .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                            .padding(.horizontal, 40)
+                            .padding(.vertical, 36)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .animation(.easeOut(duration: 0.22), value: map.center.url)
+                } else {
+                    ContentUnavailableView("Page introuvable dans l'index", systemImage: "point.3.connected.trianglepath.dotted")
                 }
-            } else {
-                ContentUnavailableView("Page introuvable dans l'index", systemImage: "point.3.connected.trianglepath.dotted")
             }
         }
         .background(Color(nsColor: .textBackgroundColor))
+        .onAppear { trail = store.openURL.map { [$0] } ?? [] }
+        .onChange(of: store.openURL) { _, url in
+            guard let url else { return }
+            // Retour sur une page déjà dans le fil : on coupe après elle.
+            if let index = trail.firstIndex(of: url) {
+                trail = Array(trail.prefix(through: index))
+            } else {
+                trail = Array((trail + [url]).suffix(6))
+            }
+        }
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Label("Carte des liens", systemImage: "point.3.connected.trianglepath.dotted")
+        HStack(spacing: 10) {
+            Image(systemName: "point.3.connected.trianglepath.dotted")
+                .foregroundStyle(Color.cairnMoss)
+            Text("Carte des liens")
                 .font(.headline)
-            Text("Clique sur une page pour centrer la carte sur elle.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button("Lire la page") { store.isLinkMapPresented = false }
-                .keyboardShortcut(.cancelAction)
-                .help("Revenir au texte (Échap)")
+
+            // Fil du parcours : IAM › Kerberos › Active Directory
+            if trail.count > 1 {
+                Divider().frame(height: 14)
+                ForEach(Array(trail.enumerated()), id: \.element) { index, url in
+                    if index > 0 {
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    let isLast = index == trail.count - 1
+                    Button(title(for: url)) { store.openPage(url) }
+                        .buttonStyle(.plain)
+                        .font(.callout.weight(isLast ? .semibold : .regular))
+                        .foregroundStyle(isLast ? Color.primary : Color.secondary)
+                        .lineLimit(1)
+                        .disabled(isLast)
+                }
+            } else {
+                Text("Clique sur une page pour centrer la carte sur elle.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 12)
+            Button {
+                store.isLinkMapPresented = false
+            } label: {
+                Label("Lire la page", systemImage: "doc.text")
+            }
+            .keyboardShortcut(.cancelAction)
+            .help("Revenir au texte (Échap)")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+
+    private func title(for url: URL) -> String {
+        let path = url.standardizedFileURL.path
+        return store.searchIndex.first { $0.url.standardizedFileURL.path == path }?.title
+            ?? url.deletingPathExtension().lastPathComponent
     }
 }
 
@@ -49,89 +102,66 @@ struct LinkMapView: View {
 private struct MapCanvas: View {
     @Environment(WikiStore.self) private var store
     let map: LinkMap
+    /// Carte survolée : ses liens s'illuminent, les autres s'estompent.
+    @State private var hovered: String?
 
-    private static let columnWidth: CGFloat = 230
+    private static let columnWidth: CGFloat = 240
+    private static let centerWidth: CGFloat = 270
+    private static let gap: CGFloat = 84
     private static let visibleLimit = 12
 
     var body: some View {
-        VStack(spacing: 44) {
-            HStack(alignment: .center, spacing: 72) {
+        VStack(spacing: 52) {
+            HStack(alignment: .center, spacing: Self.gap) {
                 column(
                     title: "Mentionnée dans",
-                    hint: "pages qui citent celle-ci",
-                    empty: "Aucune page ne cite celle-ci. Écris [[\(map.center.title)]] dans une autre page.",
+                    icon: "arrow.right.to.line",
+                    hint: "Pages qui citent celle-ci",
+                    empty: "Aucune page ne cite celle-ci.\nÉcris [[\(map.center.title)]] dans une autre page.",
                     count: map.incoming.count
                 ) {
                     ForEach(map.incoming.prefix(Self.visibleLimit)) { entry in
-                        NodeCard(title: entry.title, detail: entry.path, icon: icon(entry)) {
+                        NodeCard(id: "in:" + entry.url.path, title: entry.title, detail: entry.path,
+                                 icon: icon(entry), hovered: $hovered) {
                             store.openPage(entry.url)
                         }
-                        .mapNode("in:" + entry.url.path)
                     }
                 }
 
-                CenterCard(entry: map.center)
-                    .frame(width: 250)
+                CenterCard(map: map, isHighlighted: hovered == "center")
+                    .frame(width: Self.centerWidth)
+                    .onHover { hovered = $0 ? "center" : (hovered == "center" ? nil : hovered) }
                     .mapNode("center")
 
                 column(
                     title: "Renvoie vers",
-                    hint: "pages citées avec [[…]]",
-                    empty: "Cette page ne cite aucune autre page. Tape [[ dans l'éditeur pour en lier une.",
+                    icon: "arrow.right.from.line",
+                    hint: "Pages citées avec [[…]]",
+                    empty: "Cette page ne cite aucune autre page.\nTape [[ dans l'éditeur pour en lier une.",
                     count: map.outgoing.count
                 ) {
                     ForEach(map.outgoing.prefix(Self.visibleLimit)) { target in
                         if let entry = target.entry {
-                            NodeCard(title: entry.title, detail: entry.path, icon: icon(entry)) {
+                            NodeCard(id: "out:" + target.id, title: entry.title, detail: entry.path,
+                                     icon: icon(entry), hovered: $hovered) {
                                 store.openPage(entry.url)
                             }
-                            .mapNode("out:" + target.id)
                         } else {
-                            NodeCard(title: target.name, detail: "Page à créer (clic)", icon: "plus.circle", isMissing: true) {
+                            NodeCard(id: "out:" + target.id, title: target.name, detail: "Page à créer",
+                                     icon: "plus", isMissing: true, hovered: $hovered) {
                                 store.isLinkMapPresented = false
                                 store.openWikiLink(target.name)
                             }
-                            .mapNode("out:" + target.id)
                         }
                     }
                 }
             }
 
             if !map.tagGroups.isEmpty {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Mêmes tags")
-                        .font(.headline)
-                    ForEach(map.tagGroups) { group in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Button("#" + group.name) { store.openSearch(tag: group.key) }
-                                .buttonStyle(.plain)
-                                .font(.callout.weight(.semibold))
-                                .foregroundStyle(Color.cairnMoss)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 3)
-                                .background(Capsule().fill(Color.cairnMoss.opacity(0.12)))
-                                .help("Toutes les pages avec #\(group.name)")
-                                .mapNode("tag:" + group.key)
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 190, maximum: 240), spacing: 10)],
-                                      alignment: .leading, spacing: 10) {
-                                ForEach(group.pages) { entry in
-                                    NodeCard(title: entry.title, detail: entry.path, icon: icon(entry), compact: true) {
-                                        store.openPage(entry.url)
-                                    }
-                                }
-                            }
-                            if group.hiddenCount > 0 {
-                                Text("+ \(group.hiddenCount) autres pages")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: Self.columnWidth * 2 + 250 + 144, alignment: .leading)
+                tagSection
             }
         }
-        // Les traits sont dessinés derrière les cartes, à partir de leurs positions.
+        // Les traits sont dessinés derrière les cartes, à partir de leurs positions réelles.
         .backgroundPreferenceValue(MapNodeKey.self) { anchors in
             GeometryReader { proxy in
                 let frames = anchors.mapValues { proxy[$0] }
@@ -140,34 +170,85 @@ private struct MapCanvas: View {
                 }
             }
         }
+        .animation(.easeOut(duration: 0.15), value: hovered)
     }
 
+    // MARK: Colonnes
+
     @ViewBuilder
-    private func column<Content: View>(title: String, hint: String, empty: String, count: Int,
+    private func column<Content: View>(title: String, icon: String, hint: String, empty: String, count: Int,
                                        @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(count > 0 ? "\(title) (\(count))" : title).font(.headline)
-                Text(hint).font(.caption).foregroundStyle(.secondary)
-            }
+            SectionTitle(title: title, icon: icon, count: count)
+            Text(hint)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .padding(.top, -6)
+
             if count == 0 {
-                Text(empty)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color.primary.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
+                VStack(alignment: .leading, spacing: 6) {
+                    Image(systemName: "link.badge.plus")
+                        .foregroundStyle(.tertiary)
+                    Text(empty)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.primary.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [4, 4])))
             } else {
                 content()
                 if count > Self.visibleLimit {
                     Text("+ \(count - Self.visibleLimit) autres")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
                 }
             }
         }
         .frame(width: Self.columnWidth)
+    }
+
+    private var tagSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionTitle(title: "Mêmes tags", icon: "number", count: map.tagGroups.reduce(0) { $0 + $1.pages.count + $1.hiddenCount })
+            ForEach(map.tagGroups) { group in
+                VStack(alignment: .leading, spacing: 8) {
+                    Button { store.openSearch(tag: group.key) } label: {
+                        Text("#" + group.name)
+                            .font(.callout.weight(.semibold))
+                            .foregroundStyle(Color.cairnMoss)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 3)
+                            .background(Capsule().fill(Color.cairnMoss.opacity(0.12)))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Toutes les pages avec #\(group.name)")
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 260), spacing: 10)],
+                              alignment: .leading, spacing: 10) {
+                        ForEach(group.pages) { entry in
+                            NodeCard(id: "tag:\(group.key):" + entry.url.path, title: entry.title, detail: entry.path,
+                                     icon: icon(entry), compact: true, isTracked: false, hovered: $hovered) {
+                                store.openPage(entry.url)
+                            }
+                        }
+                    }
+                    if group.hiddenCount > 0 {
+                        Text("+ \(group.hiddenCount) autres pages")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: Self.columnWidth * 2 + Self.centerWidth + Self.gap * 2, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color.cairnMoss.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.cairnMoss.opacity(0.18)))
+        .mapNode("tags")
     }
 
     private func icon(_ entry: SearchEntry) -> String {
@@ -178,43 +259,58 @@ private struct MapCanvas: View {
 
     private func draw(in context: inout GraphicsContext, frames: [String: CGRect]) {
         guard let center = frames["center"] else { return }
-        let line = Color.primary.opacity(0.28)
+
+        func color(for node: String) -> (Color, CGFloat) {
+            let active = hovered == node || hovered == "center"
+            if active { return (Color.cairnMoss, 2) }
+            return (Color.primary.opacity(hovered == nil ? 0.22 : 0.08), 1.3)
+        }
 
         // Pages qui citent -> page centrale
         for entry in map.incoming.prefix(Self.visibleLimit) {
-            guard let from = frames["in:" + entry.url.path] else { continue }
-            arrow(in: &context, from: CGPoint(x: from.maxX, y: from.midY),
-                  to: CGPoint(x: center.minX, y: center.midY), color: line, dashed: false)
+            let id = "in:" + entry.url.path
+            guard let from = frames[id] else { continue }
+            let (shade, width) = color(for: id)
+            curve(in: &context, from: CGPoint(x: from.maxX, y: from.midY),
+                  to: CGPoint(x: center.minX, y: center.midY), color: shade, width: width, dashed: false, arrow: true)
         }
-        // Page centrale -> pages citées (pointillé si la page n'existe pas encore)
+        // Page centrale -> pages citées (pointillé : page à créer)
         for target in map.outgoing.prefix(Self.visibleLimit) {
-            guard let to = frames["out:" + target.id] else { continue }
-            arrow(in: &context, from: CGPoint(x: center.maxX, y: center.midY),
-                  to: CGPoint(x: to.minX, y: to.midY), color: line, dashed: target.entry == nil)
+            let id = "out:" + target.id
+            guard let to = frames[id] else { continue }
+            let (shade, width) = color(for: id)
+            curve(in: &context, from: CGPoint(x: center.maxX, y: center.midY),
+                  to: CGPoint(x: to.minX, y: to.midY), color: shade, width: width, dashed: target.entry == nil, arrow: true)
         }
-        // Page centrale -> tags (trait vert discret, sans flèche)
-        for group in map.tagGroups {
-            guard let chip = frames["tag:" + group.key] else { continue }
+        // Page centrale -> section des tags (vertical, pointillé vert)
+        if let tags = frames["tags"] {
             var path = Path()
             let start = CGPoint(x: center.midX, y: center.maxY)
-            let end = CGPoint(x: chip.midX, y: chip.minY)
+            let end = CGPoint(x: center.midX, y: tags.minY)
             path.move(to: start)
-            let dy = max(30, (end.y - start.y) * 0.5)
-            path.addCurve(to: end, control1: CGPoint(x: start.x, y: start.y + dy), control2: CGPoint(x: end.x, y: end.y - dy))
-            context.stroke(path, with: .color(Color.cairnMoss.opacity(0.45)), style: StrokeStyle(lineWidth: 1.2, dash: [3, 4]))
+            path.addLine(to: end)
+            context.stroke(path, with: .color(Color.cairnMoss.opacity(0.5)), style: StrokeStyle(lineWidth: 1.3, dash: [3, 4]))
+            dot(in: &context, at: end, color: Color.cairnMoss.opacity(0.7))
         }
+
+        // Points d'ancrage sur la page centrale
+        let port = Color.cairnMoss
+        if !map.incoming.isEmpty { dot(in: &context, at: CGPoint(x: center.minX, y: center.midY), color: port) }
+        if !map.outgoing.isEmpty { dot(in: &context, at: CGPoint(x: center.maxX, y: center.midY), color: port) }
+        if !map.tagGroups.isEmpty { dot(in: &context, at: CGPoint(x: center.midX, y: center.maxY), color: port) }
     }
 
-    /// Courbe horizontale avec une petite flèche à l'arrivée.
-    private func arrow(in context: inout GraphicsContext, from start: CGPoint, to end: CGPoint, color: Color, dashed: Bool) {
+    /// Courbe horizontale douce, avec une petite flèche à l'arrivée.
+    private func curve(in context: inout GraphicsContext, from start: CGPoint, to end: CGPoint,
+                       color: Color, width: CGFloat, dashed: Bool, arrow: Bool) {
         var path = Path()
         path.move(to: start)
-        let dx = max(28, (end.x - start.x) * 0.5)
-        path.addCurve(to: CGPoint(x: end.x - 6, y: end.y),
-                      control1: CGPoint(x: start.x + dx, y: start.y),
-                      control2: CGPoint(x: end.x - dx, y: end.y))
-        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 1.3, lineCap: .round, dash: dashed ? [4, 4] : []))
-
+        let tip = CGPoint(x: end.x - (arrow ? 7 : 0), y: end.y)
+        let dx = max(30, (tip.x - start.x) * 0.55)
+        path.addCurve(to: tip, control1: CGPoint(x: start.x + dx, y: start.y), control2: CGPoint(x: tip.x - dx, y: tip.y))
+        context.stroke(path, with: .color(color),
+                       style: StrokeStyle(lineWidth: width, lineCap: .round, dash: dashed ? [4, 4] : []))
+        guard arrow else { return }
         var head = Path()
         head.move(to: end)
         head.addLine(to: CGPoint(x: end.x - 8, y: end.y - 4.5))
@@ -222,82 +318,194 @@ private struct MapCanvas: View {
         head.closeSubpath()
         context.fill(head, with: .color(color))
     }
+
+    private func dot(in context: inout GraphicsContext, at point: CGPoint, color: Color) {
+        let rect = CGRect(x: point.x - 3.5, y: point.y - 3.5, width: 7, height: 7)
+        context.fill(Path(ellipseIn: rect), with: .color(color))
+    }
 }
 
-// MARK: Cartes
+// MARK: Éléments
 
-private struct CenterCard: View {
-    let entry: SearchEntry
+/// Titre de section : « MENTIONNÉE DANS   3 ».
+private struct SectionTitle: View {
+    let title: String
+    let icon: String
+    let count: Int
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: entry.isLocked ? "lock.doc.fill" : "doc.text.fill")
-                .font(.title)
-                .foregroundStyle(Color.cairnMoss)
-            Text(entry.title)
-                .font(.title3.weight(.semibold))
-                .multilineTextAlignment(.center)
-            if !entry.path.isEmpty {
-                Text(entry.path)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            if !entry.tags.isEmpty {
-                Text(entry.tags.prefix(4).map { "#" + $0 }.joined(separator: "  "))
-                    .font(.caption)
-                    .foregroundStyle(Color.cairnMoss)
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .tracking(0.6)
+            Spacer(minLength: 4)
+            if count > 0 {
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.primary.opacity(0.07)))
             }
         }
-        .padding(18)
+        .foregroundStyle(.secondary)
+    }
+}
+
+private struct CenterCard: View {
+    let map: LinkMap
+    let isHighlighted: Bool
+
+    var body: some View {
+        let entry = map.center
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.cairnMoss.opacity(0.15))
+                    .frame(width: 46, height: 46)
+                Image(systemName: entry.isLocked ? "lock.doc.fill" : "doc.text.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.cairnMoss)
+            }
+            VStack(spacing: 3) {
+                Text(entry.title)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !entry.path.isEmpty, entry.path != entry.title {
+                    Text(entry.path)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+            }
+            if !entry.tags.isEmpty {
+                HStack(spacing: 5) {
+                    ForEach(entry.tags.prefix(3), id: \.self) { tag in
+                        Text("#" + tag)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(Color.cairnMoss)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.cairnMoss.opacity(0.12)))
+                    }
+                }
+            }
+            Divider().padding(.horizontal, 10)
+            HStack(spacing: 14) {
+                stat(map.incoming.count, "citent")
+                stat(map.outgoing.count, "cités")
+                stat(map.tagGroups.reduce(0) { $0 + $1.pages.count + $1.hiddenCount }, "mêmes tags")
+            }
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.cairnMoss.opacity(0.08)))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.cairnMoss.opacity(0.6), lineWidth: 1.5))
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(nsColor: .controlBackgroundColor))
+                .shadow(color: Color.cairnMoss.opacity(isHighlighted ? 0.35 : 0.18), radius: isHighlighted ? 18 : 12, y: 4)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.cairnMoss.opacity(0.55), lineWidth: 1.5))
+    }
+
+    private func stat(_ value: Int, _ label: String) -> some View {
+        VStack(spacing: 0) {
+            Text("\(value)")
+                .font(.headline.monospacedDigit())
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
 private struct NodeCard: View {
+    let id: String
     let title: String
     let detail: String
     let icon: String
     var isMissing = false
     var compact = false
+    /// La carte a-t-elle un trait vers la page centrale (position à mémoriser) ?
+    var isTracked = true
+    @Binding var hovered: String?
     let action: () -> Void
-    @State private var isHovering = false
+
+    private var isHovering: Bool { hovered == id }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
+        let card = Button(action: action) {
+            HStack(spacing: 10) {
                 Image(systemName: icon)
+                    .font(.callout)
                     .foregroundStyle(isMissing ? Color.secondary : Color.cairnMoss)
-                    .frame(width: 16)
+                    .frame(width: 18)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
-                        .font(compact ? .callout : .body)
+                        .font(compact ? .callout : .callout.weight(.medium))
+                        .foregroundStyle(isMissing ? Color.secondary : Color.primary)
                         .lineLimit(1)
-                    if !detail.isEmpty {
+                    if !detail.isEmpty, detail != title {
                         Text(detail)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                             .lineLimit(1)
                             .truncationMode(.head)
                     }
                 }
                 Spacer(minLength: 0)
+                if isHovering && !isMissing {
+                    Image(systemName: "scope")
+                        .font(.caption)
+                        .foregroundStyle(Color.cairnMoss)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, compact ? 6 : 8)
+            .padding(.horizontal, 12)
+            .padding(.vertical, compact ? 7 : 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 9)
-                .fill(isHovering ? Color.cairnMoss.opacity(0.10) : Color(nsColor: .controlBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: 9)
-                .strokeBorder(Color.primary.opacity(isMissing ? 0.25 : 0.12),
-                              style: StrokeStyle(lineWidth: 1, dash: isMissing ? [4, 3] : [])))
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(isMissing ? Color.clear : Color(nsColor: .controlBackgroundColor))
+                    .shadow(color: .black.opacity(isHovering ? 0.12 : 0.05), radius: isHovering ? 8 : 2, y: isHovering ? 3 : 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(isHovering ? Color.cairnMoss.opacity(0.7) : Color.primary.opacity(isMissing ? 0.25 : 0.09),
+                                  style: StrokeStyle(lineWidth: isHovering ? 1.4 : 1, dash: isMissing ? [4, 3] : []))
+            )
+            .scaleEffect(isHovering ? 1.015 : 1)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
+        .onHover { inside in
+            if inside { hovered = id } else if hovered == id { hovered = nil }
+        }
         .help(isMissing ? "Cette page n'existe pas encore : clic pour la créer" : "Centrer la carte sur « \(title) »")
+
+        if isTracked { card.mapNode(id) } else { card }
+    }
+}
+
+/// Fond quadrillé de points, très discret : donne l'impression d'un plan de travail.
+private struct DotGrid: View {
+    var body: some View {
+        Canvas { context, size in
+            let spacing: CGFloat = 22
+            let dot = Path(ellipseIn: CGRect(x: 0, y: 0, width: 1.6, height: 1.6))
+            var y: CGFloat = spacing / 2
+            while y < size.height {
+                var x: CGFloat = spacing / 2
+                while x < size.width {
+                    context.fill(dot.offsetBy(dx: x, dy: y), with: .color(Color.primary.opacity(0.07)))
+                    x += spacing
+                }
+                y += spacing
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
