@@ -40,8 +40,8 @@ Réglages (Cmd+,) › Général › Thème : comme le système, clair ou sombre.
 
 ## Tags
 
-- Dans l'en-tête : `tags: iso27001, iam` (ou `tags: [iso27001, iam]`, ou une liste `- iam`).
-- Dans le texte : `#iam`, `#ISO27001` (pas dans le code ; « # Titre » avec espace reste un titre).
+- Dans l'en-tête : `tags: iso27001, Analyse des besoins` (ou `tags: [iso27001, iam]`, ou une liste `- iam`). Seule la virgule sépare les tags : un tag de l'en-tête peut contenir des espaces.
+- Dans le texte : `#iam`, `#ISO27001` (un seul mot, pas dans le code ; « # Titre » avec espace reste un titre).
 - Majuscules et accents ignorés : `#Réseau` = `#reseau`.
 - Clic sur un tag (page, en-tête, barre latérale › Tags) : recherche filtrée sur ce tag.
 

@@ -34,14 +34,16 @@ struct MarkdownPage {
     )
 
     /// Tags de la page, dans l'ordre d'apparition, sans doublons :
-    /// - en-tête : `tags: iso27001, iam` ou `tags: [iso27001, iam]` ou une liste `- iam` ;
+    /// - en-tête : `tags: iso27001, Analyse des besoins` ou `tags: [iso27001, iam]` ou une liste `- iam`
+    ///   (seule la virgule sépare deux tags : un tag de l'en-tête peut contenir des espaces) ;
     /// - texte : `#iso27001`, hors blocs de code et code en ligne.
     static func tags(in text: String) -> [String] {
         var found: [String] = []
         var keys = Set<String>()
         func add(_ raw: Substring) {
             let tag = raw.trimmingCharacters(in: CharacterSet(charactersIn: " \t#\"'[]"))
-            guard !tag.isEmpty, tag.count <= 40 else { return }
+                .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            guard !tag.isEmpty, tag.count <= 60 else { return }
             if keys.insert(SearchEngine.normalize(tag)).inserted { found.append(tag) }
         }
 
@@ -55,7 +57,7 @@ struct MarkdownPage {
                     let trimmed = line.trimmingCharacters(in: .whitespaces)
                     if trimmed.lowercased().hasPrefix("tags:") {
                         let value = trimmed.dropFirst(5)
-                        value.split(whereSeparator: { $0 == "," || $0 == " " }).forEach(add)
+                        value.split(separator: ",").forEach(add)
                         inTagList = value.trimmingCharacters(in: .whitespaces).isEmpty
                     } else if inTagList, trimmed.hasPrefix("-") {
                         add(trimmed.dropFirst())
