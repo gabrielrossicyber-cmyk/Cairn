@@ -1,0 +1,333 @@
+/* Aperçu Cairn — minimaliste : du texte, de l'air, peu de couleurs. Thèmes clair et sombre. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --brand: #3e8e7e;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --faint: #a1a1a6;
+  --border: #e5e5ea;
+  --code-bg: #f5f5f7;
+  --link: #0a66c2;
+  --accent: #0a66c2;
+}
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-size, 15px)/1.7 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.markdown-body {
+  max-width: var(--max-width, 860px);
+  margin: 0 auto;
+  padding: 40px 48px 96px;
+}
+
+/* Titres : hiérarchie par la taille et la graisse, sans traits ni couleurs */
+h1, h2, h3, h4, h5, h6 { line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; margin: 2em 0 0.6em; }
+h1 { font-size: 2.1em; font-weight: 700; letter-spacing: -0.025em; margin-top: 0.2em; margin-bottom: 0.8em; }
+h2 { font-size: 1.45em; letter-spacing: -0.015em; }
+h3 { font-size: 1.15em; }
+h4, h5, h6 { font-size: 1em; color: var(--muted); }
+
+p, ul, ol, table, pre, blockquote { margin: 0 0 1.1em; }
+ul, ol { padding-left: 1.6em; }
+li + li { margin-top: 0.3em; }
+li::marker { color: var(--faint); }
+li.task-item { list-style: none; margin-left: -1.4em; }
+li.task-item input { margin-right: 0.55em; accent-color: var(--accent); transform: translateY(1px); }
+li.task-item input:checked + * , li.task-item input:checked ~ * { color: var(--muted); }
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+strong { font-weight: 600; }
+
+blockquote {
+  padding: 0.1em 0 0.1em 1em;
+  color: var(--muted);
+  border-left: 2px solid var(--border);
+}
+
+hr { border: 0; border-top: 1px solid var(--border); margin: 2.2em 0; }
+img { max-width: 100%; border-radius: 6px; }
+
+/* Code */
+code {
+  font: 0.86em/1.55 "SF Mono", ui-monospace, Menlo, monospace;
+  background: var(--code-bg);
+  padding: 0.12em 0.36em;
+  border-radius: 5px;
+}
+pre {
+  position: relative;
+  background: var(--code-bg);
+  border: none;
+  border-radius: 10px;
+  padding: 16px 18px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; border-radius: 0; font-size: 0.84em; }
+
+.copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font: 11px -apple-system, sans-serif;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+pre:hover .copy-btn { opacity: 1; }
+
+/* Langage du bloc de code (s'efface au survol, laisse la place à « Copier ») */
+.code-lang {
+  position: absolute;
+  top: 9px;
+  right: 12px;
+  font: 10.5px/1 -apple-system, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+pre:hover .code-lang { opacity: 0; }
+
+/* Barre de lecture */
+#reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--brand);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  opacity: 0;
+  z-index: 900;
+  transition: opacity 0.2s;
+}
+
+/* Fondu à l'ouverture d'une page */
+@keyframes page-enter { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+#content.page-enter { animation: page-enter 0.18s ease-out; }
+.copy-btn:hover { color: var(--text); }
+
+/* Tableaux : lignes fines, pas de quadrillage lourd */
+table { border-collapse: collapse; display: block; overflow-x: auto; font-size: 0.94em; }
+th, td { border-bottom: 1px solid var(--border); padding: 8px 14px 8px 0; text-align: left; vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 0.92em; border-bottom-color: #d2d2d7; }
+tr:last-child td { border-bottom: none; }
+
+/* Encadrés colorés (> [!NOTE], > [!CAUTION]…) : fond pâle, filet fin */
+blockquote.callout {
+  color: var(--text);
+  border-left: 3px solid;
+  border-radius: 0 8px 8px 0;
+  padding: 10px 16px;
+}
+blockquote.callout p:last-child { margin-bottom: 0; }
+.callout-title { font-weight: 600; font-size: 0.9em; margin-bottom: 4px; }
+
+.callout-note      { background: #f0f6fd; border-color: #0a66c2; }
+.callout-note      .callout-title { color: #0a66c2; }
+.callout-tip       { background: #eff8f1; border-color: #1f8a3e; }
+.callout-tip       .callout-title { color: #1f8a3e; }
+.callout-important { background: #f6f1fd; border-color: #7e4fd6; }
+.callout-important .callout-title { color: #7e4fd6; }
+.callout-warning   { background: #fdf7e8; border-color: #b07800; }
+.callout-warning   .callout-title { color: #9a6700; }
+.callout-caution   { background: #fdf0ef; border-color: #d1242f; }
+.callout-caution   .callout-title { color: #d1242f; }
+
+/* Encadrés repliables : réponse de révision, texte extrait d'un PDF */
+.callout-answer, .callout-extract { background: var(--code-bg); border-color: #d2d2d7; }
+.callout-answer .callout-title,
+.callout-extract .callout-title { color: var(--muted); cursor: pointer; margin: 0; user-select: none; }
+.callout-answer .callout-title::before,
+.callout-extract .callout-title::before { content: "▸ "; }
+.callout-answer.open .callout-title,
+.callout-extract.open .callout-title { margin-bottom: 8px; }
+.callout-answer.open .callout-title::before,
+.callout-extract.open .callout-title::before { content: "▾ "; }
+.callout-answer .answer-body,
+.callout-extract .answer-body { display: none; }
+.callout-answer.open .answer-body,
+.callout-extract.open .answer-body { display: block; }
+.callout-extract .answer-body { font-size: 0.9em; color: var(--muted); max-height: 480px; overflow-y: auto; }
+
+/* Documents importés : ![[assets/doc.pdf]] */
+.pdf-embed { display: block; margin: 0 0 1.1em; }
+.pdf-embed iframe {
+  display: block;
+  width: 100%;
+  height: 78vh;
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+.pdf-open { display: inline-block; margin-top: 6px; font-size: 0.85em; color: var(--muted); }
+
+/* Liens internes [[Page]] */
+a.wikilink { color: var(--link); border-bottom: 1px solid rgba(10, 102, 194, 0.25); }
+a.wikilink:hover { text-decoration: none; border-bottom-color: var(--link); }
+a.wikilink.missing { color: #d1242f; border-bottom: 1px dashed rgba(209, 36, 47, 0.6); }
+
+/* Schémas Mermaid : clic = affichage en grand */
+pre.mermaid { background: #ffffff; border: 1px solid var(--border); text-align: center; cursor: zoom-in; }
+#content img { cursor: zoom-in; }
+
+/* Schéma invalide : encadré d'erreur lisible */
+pre.mermaid.mermaid-error {
+  cursor: default;
+  text-align: left;
+  white-space: normal;
+  border-color: #f0b4b8;
+  padding: 12px 14px;
+}
+.mermaid-stale { opacity: 0.3; filter: grayscale(1); text-align: center; margin-bottom: 10px; pointer-events: none; }
+.diagram-error { font: 13px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; color: var(--text); }
+.diagram-error-title { font-weight: 600; color: #d1242f; margin-bottom: 6px; }
+.diagram-error-line {
+  display: block;
+  white-space: pre-wrap;
+  background: #fdf0ef;
+  color: #82071e;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 0 0 8px;
+}
+.diagram-error-hint { margin-bottom: 4px; }
+.diagram-error-note { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+.diagram-error details { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.diagram-error details summary { cursor: pointer; }
+.diagram-error details pre {
+  white-space: pre-wrap;
+  background: var(--code-bg);
+  padding: 8px;
+  margin: 6px 0 0;
+  font: 11px/1.4 "SF Mono", Menlo, monospace;
+}
+
+/* Affichage en grand (schémas, images) */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.97);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.lightbox-content {
+  width: 96vw;
+  height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-content svg,
+.lightbox-content img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  border-radius: 0;
+}
+.lightbox-hint { position: fixed; top: 10px; right: 16px; font-size: 12px; color: var(--muted); }
+
+/* Barre de défilement discrète */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Mode sombre ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1e1e1e;
+    --text: #e3e3e3;
+    --muted: #9a9a9f;
+    --faint: #66666b;
+    --border: #353538;
+    --code-bg: #2a2a2c;
+    --link: #6cb0ff;
+    --accent: #6cb0ff;
+    --brand: #5fb39f;
+  }
+  th { border-bottom-color: #48484c; }
+  .copy-btn { background: rgba(40, 40, 42, 0.92); }
+
+  .callout-note      { background: #172433; border-color: #4d8fd6; }
+  .callout-note      .callout-title { color: #7fb6f0; }
+  .callout-tip       { background: #15291c; border-color: #3fa35b; }
+  .callout-tip       .callout-title { color: #6cc788; }
+  .callout-important { background: #241b33; border-color: #9a74e0; }
+  .callout-important .callout-title { color: #b99cf0; }
+  .callout-warning   { background: #2d2412; border-color: #c9952a; }
+  .callout-warning   .callout-title { color: #e2b552; }
+  .callout-caution   { background: #321a1b; border-color: #e05a62; }
+  .callout-caution   .callout-title { color: #f08a90; }
+  .callout-answer, .callout-extract { border-color: #48484c; }
+
+  a.wikilink { border-bottom-color: rgba(108, 176, 255, 0.3); }
+  a.wikilink.missing { color: #f08a90; border-bottom-color: rgba(240, 138, 144, 0.6); }
+
+  pre.mermaid { background: var(--bg); }
+  pre.mermaid.mermaid-error { border-color: #6b3438; }
+  .diagram-error-title { color: #f08a90; }
+  .diagram-error-line { background: #321a1b; color: #f5b3b7; }
+
+  .lightbox { background: rgba(24, 24, 24, 0.97); }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); }
+  img { opacity: 0.94; }
+
+  /* Coloration du code (remplace le thème clair GitHub) */
+  .hljs { color: var(--text); background: none; }
+  .hljs-comment, .hljs-quote { color: #7c8b8a; font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-type, .hljs-doctag { color: #ff7b9c; }
+  .hljs-string, .hljs-regexp, .hljs-addition, .hljs-meta .hljs-string { color: #a5d6a7; }
+  .hljs-number, .hljs-symbol, .hljs-bullet, .hljs-variable, .hljs-template-variable { color: #f2c27b; }
+  .hljs-title, .hljs-section, .hljs-name, .hljs-function .hljs-title { color: #8fc1ff; }
+  .hljs-attr, .hljs-attribute, .hljs-property, .hljs-params { color: #9cdcfe; }
+  .hljs-built_in, .hljs-class .hljs-title, .hljs-title.class_ { color: #d3a6ff; }
+  .hljs-meta, .hljs-selector-id, .hljs-selector-class { color: #c0c0c5; }
+  .hljs-deletion { color: #ff9a9a; }
+  .hljs-meta .hljs-keyword, .hljs-variable.language_, .hljs-template-tag { color: #ff7b9c; }
+  .hljs-title.function_, .hljs-title.class_.inherited__ { color: #8fc1ff; }
+  .hljs-operator, .hljs-selector-attr { color: #9cdcfe; }
+  .hljs-code, .hljs-formula { color: #7c8b8a; }
+  .hljs-selector-pseudo { color: #a5d6a7; }
+  .hljs-subst, .hljs-emphasis, .hljs-strong { color: var(--text); }
+  .hljs-addition, .hljs-deletion { background-color: transparent; }
+}
+
+/* Export PDF / impression */
+@media print {
+  #reading-progress, .code-lang { display: none; }
+  #content.page-enter { animation: none; }
+  .lightbox, .pdf-open, .copy-btn { display: none; }
+  body.hide-answers .callout-answer .answer-body { display: none !important; }
+  body.hide-answers .callout-answer .callout-title { margin: 0; }
+  .callout-answer .answer-body { display: block; }
+  .callout-answer .callout-title::before { content: ""; }
+  .callout-extract { display: none; }
+  .pdf-embed iframe { height: 60vh; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { font-size: 12px; }
+  .markdown-body { max-width: none; padding: 0; }
+  pre { white-space: pre-wrap; word-break: break-word; }
+  pre, table, blockquote, img { break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; }
+  table { display: table; }
+}

@@ -1,0 +1,16 @@
+# Build Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store
+
+# Sauvegardes locales
+*.avant-cairn
+
+# Contenu personnel : les wikis ne vont pas dans le dépôt du code
+BF-CYBER-2026/
+Wiki-Exemple/
+*.secuwiki.json

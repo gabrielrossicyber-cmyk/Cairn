@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- Sécurité : seuls les scripts de l'app s'exécutent ; aucune connexion réseau depuis la page
+     (seules les images https:// des notes sont autorisées). Testé avec tous les types de schémas. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file:; style-src 'self' file: 'unsafe-inline'; img-src 'self' file: secuwiki-asset: data: blob: https:; font-src 'self' file: data:; frame-src secuwiki-asset:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="github.min.css">
+<link rel="stylesheet" href="preview.css">
+<script src="markdown-it.min.js"></script>
+<script src="highlight.min.js"></script>
+<script src="powershell.min.js"></script>
+<script src="mermaid.min.js"></script>
+<script src="preview.js"></script>
+</head>
+<body>
+<article id="content" class="markdown-body"></article>
+</body>
+</html>
