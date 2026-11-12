@@ -87,6 +87,8 @@ final class WikiStore {
     /// Filtres de la recherche Cmd+K : dossier (chemin relatif, vide = tout) et tag (clé normalisée).
     var searchFolderFilter = ""
     var searchTagFilter: String?
+    /// Fenêtre « Nouveau dossier » affichée (avec son emplacement proposé).
+    var newFolderRequest: NewPageRequest?
     /// Fenêtre du mode examen affichée.
     var isExamPresented = false
     /// Carte des liens affichée à la place de la page.

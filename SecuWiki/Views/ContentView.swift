@@ -198,6 +198,10 @@ private struct WikiDialogs: ViewModifier {
                 NewPageSheet(folder: request.folder)
                     .environment(store)
             }
+            .sheet(item: Binding(get: { store.newFolderRequest }, set: { store.newFolderRequest = $0 })) { request in
+                NewFolderSheet(folder: request.folder)
+                    .environment(store)
+            }
             .sheet(isPresented: Binding(get: { store.isExamPresented }, set: { store.isExamPresented = $0 })) {
                 ExamView()
                     .environment(store)

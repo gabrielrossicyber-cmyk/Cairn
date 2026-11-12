@@ -12,9 +12,10 @@ extension WikiStore {
         newPageRequest = NewPageRequest(folder: folder)
     }
 
+    /// Ouvre la fenêtre « Nouveau dossier » (nom + emplacement, la racine comprise).
     func requestNewFolder(near node: WikiNode? = nil) {
         guard let folder = targetFolder(for: node ?? selectedNode) else { return }
-        prompt = NamePrompt(action: .newFolder(in: folder))
+        newFolderRequest = NewPageRequest(folder: folder)
     }
 
     func requestRename(_ node: WikiNode? = nil) {
@@ -213,6 +214,21 @@ extension WikiStore {
     }
 
     /// Liste des dossiers pour le menu « Déplacer vers » (sans l'élément lui-même ni ses sous-dossiers).
+    /// Emplacements possibles pour créer une page ou un dossier : la racine, puis tous les dossiers.
+    var locationOptions: [FolderOption] {
+        guard let rootURL else { return [] }
+        var options = [FolderOption(url: rootURL, label: "Racine du wiki")]
+        func walk(_ list: [WikiNode], prefix: String) {
+            for item in list where item.isFolder {
+                let label = prefix.isEmpty ? item.name : "\(prefix) › \(item.name)"
+                options.append(FolderOption(url: item.url, label: label))
+                walk(item.children ?? [], prefix: label)
+            }
+        }
+        walk(nodes, prefix: "")
+        return options
+    }
+
     func folderOptions(excluding node: WikiNode) -> [FolderOption] {
         guard let rootURL else { return [] }
         var options = [FolderOption(url: rootURL, label: "Racine")]
