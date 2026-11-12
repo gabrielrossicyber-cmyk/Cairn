@@ -12,6 +12,7 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 | Cmd+D | Ajouter / retirer la page des favoris |
 | Cmd+Maj+O | Afficher le sommaire de la page |
 | Cmd+Maj+F | Mode concentration (masque l'arborescence et les barres) |
+| Cmd+Maj+M | Carte des liens de la page ouverte |
 | Cmd+Maj+X | Mode examen chronométré |
 | Cmd+L | Verrouiller la page avec un mot de passe / la reverrouiller |
 | Cmd+Maj+I | Importer des documents (md, txt, pdf, docx, rtf, html, images) |
@@ -43,6 +44,14 @@ Réglages (Cmd+,) › Général › Thème : comme le système, clair ou sombre.
 - Dans le texte : `#iam`, `#ISO27001` (pas dans le code ; « # Titre » avec espace reste un titre).
 - Majuscules et accents ignorés : `#Réseau` = `#reseau`.
 - Clic sur un tag (page, en-tête, barre latérale › Tags) : recherche filtrée sur ce tag.
+
+## Carte des liens (Cmd+Maj+M)
+
+Une page au centre, un seul niveau, sans physique ni nuage de points :
+- à gauche, les pages qui la citent ; à droite, les pages qu'elle cite avec `[[…]]` (pointillé = page à créer) ;
+- en bas, les pages qui partagent ses tags.
+
+Clic sur une page : la carte se recentre sur elle. Échap ou « Lire la page » : retour au texte.
 
 ## Recherche filtrée (Cmd+K)
 

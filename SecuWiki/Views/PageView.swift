@@ -154,6 +154,15 @@ private struct PageHeader: View {
                 .fixedSize()
                 .help("Page chiffrée, déverrouillée. Clic : verrouiller (Cmd+L).")
             }
+            Button { store.toggleLinkMap() } label: {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .opacity(isHovering ? 1 : 0)
+            .help("Carte des liens de cette page (Cmd+Maj+M)")
+            .disabled(store.isOpenPageLocked)
             Button { store.toggleFavorite(node) } label: {
                 Image(systemName: favorite ? "star.fill" : "star")
                     .font(.caption)

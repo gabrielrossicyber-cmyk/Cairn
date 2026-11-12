@@ -9,7 +9,11 @@ struct DetailView: View {
             WelcomeView()
         } else if let node = store.selectedNode {
             if node.pageURL != nil {
-                PageView(node: node, breadcrumb: store.breadcrumb(for: node))
+                if store.isLinkMapPresented && !store.isOpenPageLocked {
+                    LinkMapView()
+                } else {
+                    PageView(node: node, breadcrumb: store.breadcrumb(for: node))
+                }
             } else {
                 ContentUnavailableView {
                     Label("Pas de page pour ce dossier", systemImage: "folder")

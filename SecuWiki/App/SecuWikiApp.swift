@@ -87,6 +87,9 @@ struct SecuWikiApp: App {
                 Button("Mode examen…") { store.startExam() }
                     .keyboardShortcut("x", modifiers: [.command, .shift])
                     .disabled(store.rootURL == nil)
+                Button(store.isLinkMapPresented ? "Revenir à la page" : "Carte des liens") { store.toggleLinkMap() }
+                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .disabled(store.openURL == nil || store.isOpenPageLocked)
                 Divider()
                 ForEach(EditorMode.allCases) { mode in
                     Button(mode.label) { store.editorMode = mode }

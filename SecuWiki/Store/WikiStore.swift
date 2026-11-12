@@ -89,6 +89,8 @@ final class WikiStore {
     var searchTagFilter: String?
     /// Fenêtre du mode examen affichée.
     var isExamPresented = false
+    /// Carte des liens affichée à la place de la page.
+    var isLinkMapPresented = false
     /// Numéro du dernier chargement lancé : un résultat plus ancien arrivé en retard est ignoré.
     @ObservationIgnored var loadGeneration = 0
 

@@ -63,6 +63,8 @@ struct ContentView: View {
                         .disabled(store.rootURL == nil)
                     Button("Mode examen…") { store.startExam() }
                         .disabled(store.rootURL == nil)
+                    Button(store.isLinkMapPresented ? "Revenir à la page" : "Carte des liens") { store.toggleLinkMap() }
+                        .disabled(store.openURL == nil || store.isOpenPageLocked)
                     Button(store.isOutlinePresented ? "Masquer le sommaire" : "Afficher le sommaire") {
                         store.toggleOutline()
                     }
@@ -108,7 +110,10 @@ struct ContentView: View {
             if visibility != .detailOnly, store.isFocusMode { store.isFocusMode = false }
         }
         .onChange(of: store.openURL) { _, url in
-            if url == nil { store.isFocusMode = false }
+            if url == nil {
+                store.isFocusMode = false
+                store.isLinkMapPresented = false
+            }
         }
         .overlay {
             if store.isSearchPresented { SearchPalette() }
