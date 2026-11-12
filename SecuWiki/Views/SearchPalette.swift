@@ -10,6 +10,7 @@ struct SearchPalette: View {
     @State private var query = ""
     @State private var codeOnly = false
     @State private var selected = 0
+    @State private var isTagBrowserPresented = false
     @FocusState private var isFocused: Bool
 
     /// Mots à chercher et tags tapés (« #iam » -> filtre ; « #ia » marche aussi, par début de tag).
@@ -163,20 +164,22 @@ struct SearchPalette: View {
                 clearButton { store.searchFolderFilter = "" }
             }
 
-            Menu {
-                Button("Tous les tags") { store.searchTagFilter = nil }
-                if !store.tagIndex.isEmpty { Divider() }
-                ForEach(store.tagIndex) { tag in
-                    Button("#\(tag.name)  (\(tag.count))") { store.searchTagFilter = tag.key }
-                }
+            Button {
+                isTagBrowserPresented = true
             } label: {
                 Label(store.searchTagFilter.map { "#" + store.tagName($0) } ?? "Tous les tags", systemImage: "number")
+                    .lineLimit(1)
             }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
+            .buttonStyle(.borderless)
             .foregroundStyle(store.searchTagFilter == nil ? Color.secondary : Color.cairnMoss)
             .disabled(store.tagIndex.isEmpty)
             .help(store.tagIndex.isEmpty ? "Aucun tag : ajoute « tags: iam, iso27001 » dans l'en-tête d'une page, ou #iam dans le texte." : "Filtrer par tag")
+            .popover(isPresented: $isTagBrowserPresented, arrowEdge: .bottom) {
+                TagBrowser { tag in
+                    isTagBrowserPresented = false
+                    store.searchTagFilter = tag.key
+                }
+            }
 
             if store.searchTagFilter != nil {
                 clearButton { store.searchTagFilter = nil }

@@ -39,23 +39,10 @@ struct SidebarView: View {
                     NodeRow(node: node)
                 }
             }
-            // Tags : un clic ouvre la recherche filtrée (lignes sans tag : pas de sélection).
+            // Tags : nuage compact des plus utilisés + « Tous les tags » (filtre) quand il y en a beaucoup.
             if !store.tagIndex.isEmpty {
                 Section("Tags", isExpanded: $showTags) {
-                    ForEach(store.tagIndex) { tag in
-                        Button { store.openSearch(tag: tag.key) } label: {
-                            HStack {
-                                Label("#" + tag.name, systemImage: "number")
-                                    .labelStyle(.titleOnly)
-                                Spacer()
-                                Text("\(tag.count)")
-                                    .font(.caption.monospacedDigit())
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    SidebarTagCloud()
                 }
             }
         }

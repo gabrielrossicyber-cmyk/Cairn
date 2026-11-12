@@ -48,6 +48,7 @@ Clic droit sur un dossier › Couleur du dossier (12 couleurs, ou aucune). La co
 - Dans le texte : `#iam`, `#ISO27001` (un seul mot, pas dans le code ; « # Titre » avec espace reste un titre).
 - Majuscules et accents ignorés : `#Réseau` = `#reseau`.
 - Clic sur un tag (page, en-tête, barre latérale › Tags) : recherche filtrée sur ce tag.
+- Barre latérale : les 12 tags les plus utilisés en pastilles ; « Tous les tags » ouvre un panneau avec filtre au clavier et tri (les plus utilisés / A → Z). Même panneau pour le filtre Tag de Cmd+K.
 
 ## Carte des liens (Cmd+Maj+M)
 
