@@ -38,6 +38,10 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 
 Réglages (Cmd+,) › Général › Thème : comme le système, clair ou sombre. Les PDF et l'impression restent toujours en clair.
 
+## Couleurs de dossier
+
+Clic droit sur un dossier › Couleur du dossier (12 couleurs, ou aucune). La couleur est enregistrée dans un fichier caché `.color` du dossier : elle le suit quand on le renomme, le déplace ou le duplique, et se synchronise avec iCloud.
+
 ## Tags
 
 - Dans l'en-tête : `tags: iso27001, Analyse des besoins` (ou `tags: [iso27001, iam]`, ou une liste `- iam`). Seule la virgule sépare les tags : un tag de l'en-tête peut contenir des espaces.

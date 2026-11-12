@@ -131,7 +131,7 @@ private struct NodeRow: View {
                 .lineLimit(1)
         } icon: {
             Image(systemName: icon)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(node.color?.color ?? Color.secondary)
         }
         .tag(node.id)
         // API glisser-déposer « classique » : plus stable que .draggable dans une liste
@@ -146,7 +146,8 @@ private struct NodeRow: View {
     }
 
     private var icon: String {
-        if node.isFolder { return node.pageURL != nil ? "folder.fill" : "folder" }
+        // Dossier coloré : icône pleine, pour que la couleur se voie bien.
+        if node.isFolder { return node.pageURL != nil || node.color != nil ? "folder.fill" : "folder" }
         return store.isLockedPage(node.pageURL ?? node.url) ? "lock.doc" : "doc.text"
     }
 }
@@ -193,6 +194,18 @@ private struct NodeContextMenu: View {
         Divider()
         Button(store.isFavorite(node) ? "Retirer des favoris" : "Ajouter aux favoris") {
             store.toggleFavorite(node)
+        }
+        if node.isFolder {
+            Menu("Couleur du dossier") {
+                ForEach(FolderColor.allCases) { color in
+                    Toggle(isOn: Binding(get: { node.color == color }, set: { _ in store.setColor(color, for: node) })) {
+                        Label { Text(color.label) } icon: { Image(nsImage: color.swatch) }
+                    }
+                }
+                Divider()
+                Button("Aucune couleur") { store.setColor(nil, for: node) }
+                    .disabled(node.color == nil)
+            }
         }
         Button("Renommer…") { store.requestRename(node) }
         Button("Dupliquer") { store.duplicate(node) }

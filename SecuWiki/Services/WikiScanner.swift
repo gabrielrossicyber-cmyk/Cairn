@@ -32,7 +32,8 @@ enum WikiScanner {
                     name: displayName(item.lastPathComponent),
                     isFolder: true,
                     children: children.isEmpty ? nil : children,
-                    pageURL: fm.fileExists(atPath: index.path) ? index : nil
+                    pageURL: fm.fileExists(atPath: index.path) ? index : nil,
+                    color: FolderColor.read(in: item)
                 ))
             } else if item.pathExtension.lowercased() == "md" {
                 // Dans un sous-dossier, index.md est la page du dossier : on ne le liste pas.

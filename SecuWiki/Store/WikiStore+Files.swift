@@ -230,6 +230,24 @@ extension WikiStore {
         return options
     }
 
+    // MARK: Couleur d'un dossier
+
+    /// Écrit (ou retire) le fichier caché `.color` du dossier.
+    func setColor(_ color: FolderColor?, for node: WikiNode) {
+        guard node.isFolder else { return }
+        let file = node.url.appendingPathComponent(FolderColor.fileName)
+        do {
+            if let color {
+                try color.rawValue.write(to: file, atomically: true, encoding: .utf8)
+            } else if FileManager.default.fileExists(atPath: file.path) {
+                try FileManager.default.removeItem(at: file)
+            }
+            reload()
+        } catch {
+            errorMessage = "Impossible de changer la couleur du dossier : \(error.localizedDescription)"
+        }
+    }
+
     // MARK: Supprimer
 
     /// Met à la corbeille (récupérable), jamais de suppression définitive.

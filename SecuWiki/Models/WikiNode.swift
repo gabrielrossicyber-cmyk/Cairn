@@ -12,6 +12,8 @@ struct WikiNode: Identifiable, Hashable {
     /// Fichier Markdown à afficher quand on sélectionne ce nœud
     /// (la page elle-même, ou index.md pour un dossier).
     var pageURL: URL?
+    /// Couleur choisie pour un dossier (fichier caché `.color`), nil = couleur par défaut.
+    var color: FolderColor? = nil
 
     var url: URL { id }
 }

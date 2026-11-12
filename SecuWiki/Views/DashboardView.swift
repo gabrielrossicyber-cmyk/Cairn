@@ -407,7 +407,13 @@ private struct QuestionContent: View {
 }
 
 private struct SectionsChart: View {
+    @Environment(WikiStore.self) private var store
     let sections: [DashboardStats.Section]
+
+    /// Couleur du dossier de la section (s'il en a une), sinon la couleur de Cairn.
+    private func color(for name: String) -> Color {
+        store.nodes.first { $0.isFolder && $0.name == name }?.color?.color ?? Color.cairnMoss
+    }
 
     var body: some View {
         if sections.isEmpty {
@@ -423,7 +429,7 @@ private struct SectionsChart: View {
                             .frame(width: 150, alignment: .leading)
                         GeometryReader { geometry in
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(Color.accentColor.opacity(0.7))
+                                .fill(color(for: section.name).opacity(0.75))
                                 .frame(width: max(geometry.size.width * CGFloat(section.count) / CGFloat(maximum), 4))
                         }
                         .frame(height: 10)
