@@ -127,10 +127,10 @@ private struct PageHeader: View {
                 Button("#" + tag) { store.openSearch(tag: tag) }
                     .buttonStyle(.plain)
                     .font(.caption)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(Color.cairnMoss)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 1)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.1)))
+                    .background(Capsule().fill(Color.cairnMoss.opacity(0.12)))
                     .help("Pages avec #\(tag)")
             }
                 .lineLimit(1)

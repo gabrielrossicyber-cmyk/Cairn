@@ -45,7 +45,7 @@ enum MarkdownHighlighter {
                                                dark: NSColor(calibratedRed: 0.45, green: 0.67, blue: 1.0, alpha: 1))
 
     private enum Style {
-        case heading1, heading2, heading3, bold, list, quote, link, wikiLink, tag, inlineCode, codeBlock, frontMatter, variable
+        case heading1, heading2, heading3, bold, list, quote, link, wikiLink, tag, inlineCode, codeBlock, frontMatter, frontMatterTags, variable
     }
 
     /// Règles appliquées dans l'ordre : la dernière gagne en cas de chevauchement.
@@ -67,6 +67,7 @@ enum MarkdownHighlighter {
             (regex("`[^`\\n]+`"), .inlineCode),                                   // `code`
             (regex("^```.*\\n[\\s\\S]*?^```[ \\t]*$"), .codeBlock),               // ``` bloc ```
             (regex("\\A---\\n[\\s\\S]*?\\n---[ \\t]*$"), .frontMatter),           // en-tête YAML
+            (regex("^tags:[ \\t]*(\\S.*)$"), .frontMatterTags),                  // tags: iam, iso27001 (dans l'en-tête)
             (regex("\\{\\{\\s*[A-Za-z0-9_]+\\s*\\}\\}"), .variable),               // {{VARIABLE}}
         ]
     }()
@@ -103,7 +104,7 @@ enum MarkdownHighlighter {
             return [.foregroundColor: mutedColor]
         case .link, .wikiLink:
             return [.foregroundColor: NSColor.linkColor]
-        case .tag:
+        case .tag, .frontMatterTags:
             return [.foregroundColor: tagColor]
         case .inlineCode:
             return [.foregroundColor: codeColor, .backgroundColor: codeBackground]
@@ -145,10 +146,18 @@ enum MarkdownHighlighter {
         let text = storage.string
         if batched { storage.beginEditing() }
         storage.setAttributes(baseAttributes, range: range)
+        let headerEnd = frontMatterEnd(of: text as NSString)
         for (regex, style) in rules {
             let attributes = attributes(for: style)
             regex.enumerateMatches(in: text, range: range) { match, _, _ in
-                if let range = match?.range { storage.addAttributes(attributes, range: range) }
+                guard let match else { return }
+                if style == .frontMatterTags {
+                    // Seulement la ligne « tags: » de l'en-tête, et seulement les valeurs (vert sur le gris de l'en-tête).
+                    guard match.range.location < headerEnd else { return }
+                    storage.addAttributes(attributes, range: match.range(at: 1))
+                } else {
+                    storage.addAttributes(attributes, range: match.range)
+                }
             }
         }
         if batched { storage.endEditing() }

@@ -174,7 +174,7 @@ struct SearchPalette: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
-            .foregroundStyle(store.searchTagFilter == nil ? Color.secondary : Color.accentColor)
+            .foregroundStyle(store.searchTagFilter == nil ? Color.secondary : Color.cairnMoss)
             .disabled(store.tagIndex.isEmpty)
             .help(store.tagIndex.isEmpty ? "Aucun tag : ajoute « tags: iam, iso27001 » dans l'en-tête d'une page, ou #iam dans le texte." : "Filtrer par tag")
 
@@ -239,7 +239,7 @@ private struct ResultRow: View {
                         .lineLimit(1)
                     if !result.entry.tags.isEmpty {
                         Text(result.entry.tags.prefix(4).map { "#" + $0 }.joined(separator: " "))
-                            .foregroundStyle(Color.accentColor.opacity(0.85))
+                            .foregroundStyle(Color.cairnMoss)
                             .lineLimit(1)
                     }
                 }
