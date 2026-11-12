@@ -38,11 +38,14 @@ enum MarkdownHighlighter {
     private static let faintColor = adaptive(light: NSColor(calibratedWhite: 0.68, alpha: 1),
                                              dark: NSColor(calibratedWhite: 0.42, alpha: 1))
     /// Bleu des titres : repère visuel de la structure de la page.
+    /// Vert mousse de Cairn pour les #tags.
+    private static let tagColor = adaptive(light: NSColor(calibratedRed: 0.24, green: 0.56, blue: 0.49, alpha: 1),
+                                           dark: NSColor(calibratedRed: 0.37, green: 0.70, blue: 0.62, alpha: 1))
     private static let headingColor = adaptive(light: NSColor(calibratedRed: 0.08, green: 0.36, blue: 0.75, alpha: 1),
                                                dark: NSColor(calibratedRed: 0.45, green: 0.67, blue: 1.0, alpha: 1))
 
     private enum Style {
-        case heading1, heading2, heading3, bold, list, quote, link, wikiLink, inlineCode, codeBlock, frontMatter, variable
+        case heading1, heading2, heading3, bold, list, quote, link, wikiLink, tag, inlineCode, codeBlock, frontMatter, variable
     }
 
     /// Règles appliquées dans l'ordre : la dernière gagne en cas de chevauchement.
@@ -60,6 +63,7 @@ enum MarkdownHighlighter {
             (regex("^>.*$"), .quote),                                             // > citation
             (regex("\\[[^\\]\\n]+\\]\\([^)\\n]+\\)"), .link),                      // [texte](lien)
             (regex("!?\\[\\[[^\\]\\n]+\\]\\]"), .wikiLink),                        // [[lien interne]]
+            (regex("(?<![\\p{L}\\p{N}_#/&=?.:(\\-])#\\p{L}[\\p{L}\\p{N}_\\-]*"), .tag),     // #tag
             (regex("`[^`\\n]+`"), .inlineCode),                                   // `code`
             (regex("^```.*\\n[\\s\\S]*?^```[ \\t]*$"), .codeBlock),               // ``` bloc ```
             (regex("\\A---\\n[\\s\\S]*?\\n---[ \\t]*$"), .frontMatter),           // en-tête YAML
@@ -99,6 +103,8 @@ enum MarkdownHighlighter {
             return [.foregroundColor: mutedColor]
         case .link, .wikiLink:
             return [.foregroundColor: NSColor.linkColor]
+        case .tag:
+            return [.foregroundColor: tagColor]
         case .inlineCode:
             return [.foregroundColor: codeColor, .backgroundColor: codeBackground]
         case .codeBlock:

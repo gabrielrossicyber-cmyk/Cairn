@@ -61,6 +61,8 @@ struct ContentView: View {
                 Menu {
                     Button("Tableau de bord") { store.selection = nil }
                         .disabled(store.rootURL == nil)
+                    Button("Mode examen…") { store.startExam() }
+                        .disabled(store.rootURL == nil)
                     Button(store.isOutlinePresented ? "Masquer le sommaire" : "Afficher le sommaire") {
                         store.toggleOutline()
                     }
@@ -189,6 +191,10 @@ private struct WikiDialogs: ViewModifier {
         content
             .sheet(item: Binding(get: { store.newPageRequest }, set: { store.newPageRequest = $0 })) { request in
                 NewPageSheet(folder: request.folder)
+                    .environment(store)
+            }
+            .sheet(isPresented: Binding(get: { store.isExamPresented }, set: { store.isExamPresented = $0 })) {
+                ExamView()
                     .environment(store)
             }
             .alert(

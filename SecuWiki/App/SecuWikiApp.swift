@@ -84,6 +84,9 @@ struct SecuWikiApp: App {
                 Button("Tableau de bord") { store.selection = nil }
                     .keyboardShortcut("d", modifiers: [.command, .shift])
                     .disabled(store.rootURL == nil)
+                Button("Mode examen…") { store.startExam() }
+                    .keyboardShortcut("x", modifiers: [.command, .shift])
+                    .disabled(store.rootURL == nil)
                 Divider()
                 ForEach(EditorMode.allCases) { mode in
                     Button(mode.label) { store.editorMode = mode }

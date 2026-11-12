@@ -65,6 +65,8 @@ struct WikiSettings: Codable, Equatable {
     var hiddenTemplates: [String] = []
     /// Widgets du tableau de bord (nil = disposition par défaut).
     var dashboard: [DashboardWidget]?
+    /// Examens blancs passés (les 50 derniers).
+    var examHistory: [ExamResult] = []
 
     init() {}
 
@@ -77,10 +79,11 @@ struct WikiSettings: Codable, Equatable {
         hiddenTemplates = try container.decodeIfPresent([String].self, forKey: .hiddenTemplates) ?? []
         // try? : un widget inconnu (version future de l'app) ne doit pas faire perdre les autres réglages.
         dashboard = (try? container.decodeIfPresent([DashboardWidget].self, forKey: .dashboard)) ?? nil
+        examHistory = (try? container.decodeIfPresent([ExamResult].self, forKey: .examHistory)) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, defaultTemplate, globalVariables, hiddenTemplates, dashboard
+        case name, defaultTemplate, globalVariables, hiddenTemplates, dashboard, examHistory
     }
 
     /// Même contenu (sans tenir compte des identifiants internes des variables).
@@ -89,6 +92,7 @@ struct WikiSettings: Codable, Equatable {
             && defaultTemplate == other.defaultTemplate
             && hiddenTemplates == other.hiddenTemplates
             && dashboard == other.dashboard
+            && examHistory == other.examHistory
             && globalVariables.map { [$0.name, $0.value] } == other.globalVariables.map { [$0.name, $0.value] }
     }
 }

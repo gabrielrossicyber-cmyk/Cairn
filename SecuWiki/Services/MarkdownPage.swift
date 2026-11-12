@@ -25,6 +25,61 @@ struct MarkdownPage {
     let variables: [PageVariable]
     let body: String
 
+    // MARK: Tags
+
+    /// #tag dans le texte : une lettre juste après « # » (« # Titre » avec espace reste un titre).
+    /// Pas précédé d'une lettre, d'un chiffre, de « / », « ( »… (ancres d'URL, entités HTML, liens [x](#ancre)).
+    static let inlineTagPattern = try! NSRegularExpression( // swiftlint:disable:this force_try
+        pattern: "(?<![\\p{L}\\p{N}_#/&=?.:(\\-])#(\\p{L}[\\p{L}\\p{N}_\\-]*)"
+    )
+
+    /// Tags de la page, dans l'ordre d'apparition, sans doublons :
+    /// - en-tête : `tags: iso27001, iam` ou `tags: [iso27001, iam]` ou une liste `- iam` ;
+    /// - texte : `#iso27001`, hors blocs de code et code en ligne.
+    static func tags(in text: String) -> [String] {
+        var found: [String] = []
+        var keys = Set<String>()
+        func add(_ raw: Substring) {
+            let tag = raw.trimmingCharacters(in: CharacterSet(charactersIn: " \t#\"'[]"))
+            guard !tag.isEmpty, tag.count <= 40 else { return }
+            if keys.insert(SearchEngine.normalize(tag)).inserted { found.append(tag) }
+        }
+
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+        var body = Substring(normalized)
+        if normalized.hasPrefix("---\n") {
+            let rest = normalized.dropFirst(4)
+            if let end = rest.range(of: "\n---") {
+                var inTagList = false
+                for line in rest[rest.startIndex..<end.lowerBound].split(separator: "\n", omittingEmptySubsequences: false) {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if trimmed.lowercased().hasPrefix("tags:") {
+                        let value = trimmed.dropFirst(5)
+                        value.split(whereSeparator: { $0 == "," || $0 == " " }).forEach(add)
+                        inTagList = value.trimmingCharacters(in: .whitespaces).isEmpty
+                    } else if inTagList, trimmed.hasPrefix("-") {
+                        add(trimmed.dropFirst())
+                    } else if !line.hasPrefix(" "), !line.hasPrefix("\t") {
+                        inTagList = false
+                    }
+                }
+                body = rest[end.upperBound...]
+            }
+        }
+
+        var inFence = false
+        for line in body.split(separator: "\n", omittingEmptySubsequences: false) {
+            if line.trimmingCharacters(in: .whitespaces).hasPrefix("```") { inFence.toggle(); continue }
+            guard !inFence, line.contains("#") else { continue }
+            let withoutCode = String(line).replacingOccurrences(of: "`[^`]*`", with: " ", options: .regularExpression)
+            let ns = withoutCode as NSString
+            for match in inlineTagPattern.matches(in: withoutCode, range: NSRange(location: 0, length: ns.length)) {
+                add(Substring(ns.substring(with: match.range(at: 1))))
+            }
+        }
+        return found
+    }
+
     static func parse(_ text: String) -> MarkdownPage {
         let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
 

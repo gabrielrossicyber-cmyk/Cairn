@@ -94,6 +94,7 @@ struct PageView: View {
             context: context,
             tocRequest: store.tocRequest,
             onWikiLink: { store.openWikiLink($0) },
+            onTag: { store.openSearch(tag: $0) },
             onToggleTask: { store.toggleTask(at: $0) },
             scrollSync: scrollSync
         )
@@ -116,10 +117,22 @@ private struct PageHeader: View {
 
     var body: some View {
         let favorite = store.isFavorite(node)
+        let tags = store.isOpenPageLocked ? [] : MarkdownPage.tags(in: store.rawText)
         HStack(spacing: 10) {
             Text(breadcrumb.joined(separator: "  /  "))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+            // Tags de la page : un clic ouvre la recherche filtrée.
+            ForEach(tags.prefix(6), id: \.self) { tag in
+                Button("#" + tag) { store.openSearch(tag: tag) }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.1)))
+                    .help("Pages avec #\(tag)")
+            }
                 .lineLimit(1)
                 .truncationMode(.head)
             Spacer()

@@ -88,6 +88,19 @@ pre code { background: none; padding: 0; border-radius: 0; font-size: 0.84em; }
 }
 pre:hover .copy-btn { opacity: 1; }
 
+/* #tags */
+a.tag {
+  display: inline-block;
+  padding: 0 0.5em;
+  border-radius: 999px;
+  font-size: 0.86em;
+  line-height: 1.6;
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+}
+a.tag:hover { text-decoration: none; background: color-mix(in srgb, var(--brand) 22%, transparent); }
+@media print { a.tag { background: none; padding: 0; } }
+
 /* Langage du bloc de code (s'efface au survol, laisse la place à « Copier ») */
 .code-lang {
   position: absolute;

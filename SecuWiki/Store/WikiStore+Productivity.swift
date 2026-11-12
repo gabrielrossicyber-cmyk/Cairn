@@ -23,6 +23,34 @@ extension WikiStore {
         pageKeys = lookup.keys.sorted()
         let locked = Set(searchIndex.filter(\.isLocked).map { $0.url.standardizedFileURL.path })
         if locked != lockedPages { lockedPages = locked }
+        rebuildTagIndex()
+    }
+
+    // MARK: Tags
+
+    private func rebuildTagIndex() {
+        var names: [String: String] = [:]
+        var counts: [String: Int] = [:]
+        for entry in searchIndex {
+            for (tag, key) in zip(entry.tags, entry.tagKeys) {
+                if names[key] == nil { names[key] = tag }
+                counts[key, default: 0] += 1
+            }
+        }
+        let tags = counts.map { TagInfo(key: $0.key, name: names[$0.key] ?? $0.key, count: $0.value) }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        if tags != tagIndex { tagIndex = tags }
+    }
+
+    func tagName(_ key: String) -> String {
+        tagIndex.first { $0.key == key }?.name ?? key
+    }
+
+    /// Ouvre la recherche filtrée sur ce tag (clic sur un tag dans une page ou la barre latérale).
+    func openSearch(tag: String) {
+        guard rootURL != nil else { return }
+        searchTagFilter = SearchEngine.normalize(tag)
+        isSearchPresented = true
     }
 
     /// Clic sur [[Nom]] : affiche la page dans le panneau de droite,

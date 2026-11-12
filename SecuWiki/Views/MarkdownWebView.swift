@@ -42,6 +42,8 @@ struct MarkdownWebView: NSViewRepresentable {
     var tocRequest: TOCRequest?
     /// Clic sur un lien [[Page]].
     var onWikiLink: (String) -> Void = { _ in }
+    /// Clic sur un #tag.
+    var onTag: (String) -> Void = { _ in }
     /// Clic sur une case à cocher (n° de la case dans la page).
     var onToggleTask: (Int) -> Void = { _ in }
     /// Défilement synchronisé avec l'éditeur (mode côte à côte).
@@ -73,6 +75,7 @@ struct MarkdownWebView: NSViewRepresentable {
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.onWikiLink = onWikiLink
+        context.coordinator.onTag = onTag
         context.coordinator.onToggleTask = onToggleTask
         scrollSync?.webView = webView
         context.coordinator.render(markdown, pageID: pageID, context: self.context)
@@ -87,6 +90,7 @@ struct MarkdownWebView: NSViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         weak var webView: WKWebView?
         var onWikiLink: (String) -> Void = { _ in }
+        var onTag: (String) -> Void = { _ in }
         var onToggleTask: (Int) -> Void = { _ in }
         private var isLoaded = false
         private var pending: (markdown: String, pageID: URL?, context: RenderContext)?
@@ -176,6 +180,10 @@ struct MarkdownWebView: NSViewRepresentable {
                let name = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first(where: { $0.name == "name" })?.value {
                 onWikiLink(name)
+            } else if scheme == "secuwiki-tag",
+                      let name = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                        .queryItems?.first(where: { $0.name == "name" })?.value {
+                onTag(name)
             } else if scheme == WikiAssetSchemeHandler.scheme {
                 // « Ouvrir le PDF dans Aperçu » : seulement un document DU wiki, jamais une app ou un script.
                 if let file = WikiAssetSchemeHandler.safeFileURL(for: url), WikiAssetSchemeHandler.isSafeToOpen(file) {

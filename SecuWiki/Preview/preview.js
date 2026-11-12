@@ -244,6 +244,43 @@
     });
   }
 
+  // #tag dans le texte -> pastille cliquable (ouvre la recherche filtrée sur ce tag).
+  // Même règle que Swift (MarkdownPage.inlineTagPattern) : pas dans le code, pas après une lettre, « / », « ( »…
+  const tagPattern = /(?<![\p{L}\p{N}_#\/&=?.:(\-])#(\p{L}[\p{L}\p{N}_\-]*)/gu;
+  function renderTags(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        return node.parentElement && node.parentElement.closest('pre, code, a')
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = [];
+    while (walker.nextNode()) {
+      if (walker.currentNode.nodeValue.indexOf('#') !== -1) nodes.push(walker.currentNode);
+    }
+    nodes.forEach(function (node) {
+      const text = node.nodeValue;
+      tagPattern.lastIndex = 0;
+      if (!tagPattern.test(text)) return;
+      tagPattern.lastIndex = 0;
+      const fragment = document.createDocumentFragment();
+      let last = 0;
+      let match;
+      while ((match = tagPattern.exec(text))) {
+        fragment.appendChild(document.createTextNode(text.slice(last, match.index)));
+        const link = document.createElement('a');
+        link.className = 'tag';
+        link.textContent = '#' + match[1];
+        link.title = 'Pages avec #' + match[1];
+        link.href = 'secuwiki-tag://tag?name=' + encodeURIComponent(match[1]);
+        fragment.appendChild(link);
+        last = tagPattern.lastIndex;
+      }
+      fragment.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(fragment, node);
+    });
+  }
+
   // Images relatives (assets/capture.png) -> servies par l'app depuis le dossier de la page.
   function resolveImages(root, base) {
     if (!base) return;
@@ -561,6 +598,7 @@
     renderCallouts(content);
     renderTaskLists(content, context.interactiveTasks === true);
     renderWikiLinks(content, context.pages, context.base);
+    renderTags(content);
     resolveImages(content, context.base);
     addCopyButtons(content);
     window.scrollTo(0, resetScroll ? 0 : scrollY);

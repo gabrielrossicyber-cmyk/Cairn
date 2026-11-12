@@ -12,6 +12,7 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 | Cmd+D | Ajouter / retirer la page des favoris |
 | Cmd+Maj+O | Afficher le sommaire de la page |
 | Cmd+Maj+F | Mode concentration (masque l'arborescence et les barres) |
+| Cmd+Maj+X | Mode examen chronométré |
 | Cmd+L | Verrouiller la page avec un mot de passe / la reverrouiller |
 | Cmd+Maj+I | Importer des documents (md, txt, pdf, docx, rtf, html, images) |
 | Cmd+Maj+E / Cmd+P | Exporter la page en PDF (A4) / imprimer |
@@ -35,6 +36,27 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 ## Apparence
 
 Réglages (Cmd+,) › Général › Thème : comme le système, clair ou sombre. Les PDF et l'impression restent toujours en clair.
+
+## Tags
+
+- Dans l'en-tête : `tags: iso27001, iam` (ou `tags: [iso27001, iam]`, ou une liste `- iam`).
+- Dans le texte : `#iam`, `#ISO27001` (pas dans le code ; « # Titre » avec espace reste un titre).
+- Majuscules et accents ignorés : `#Réseau` = `#reseau`.
+- Clic sur un tag (page, en-tête, barre latérale › Tags) : recherche filtrée sur ce tag.
+
+## Recherche filtrée (Cmd+K)
+
+- Menus « Dossier » et « Tag » sous le champ de recherche ; le filtre dossier reste actif d'une recherche à l'autre.
+- `#tag` directement dans la recherche : `#iam kerberos` (le début du tag suffit : `#ia`).
+- Sans texte, la liste montre toutes les pages du filtre.
+
+## Mode examen (Cmd+Maj+X)
+
+- Questions tirées au hasard des blocs `/question` (question sur une ligne, réponse dans l'encadré `> [!REPONSE]` juste en dessous).
+- Périmètre : dossier et/ou tag ; nombre de questions ; durée. Le chrono arrête l'examen à zéro.
+- Tu écris ta réponse, tu affiches la correction, tu te notes : Faux / Partiel / Juste (Cmd+1/2/3).
+- Note sur 6 (barème suisse : 1 + 5 × points / maximum, arrondie au demi-point, réussi dès 4).
+- Historique des 50 derniers examens enregistré dans le wiki ; « Refaire les questions ratées ».
 
 ## Tableau de bord (Cmd+Maj+D)
 

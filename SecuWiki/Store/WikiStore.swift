@@ -82,6 +82,13 @@ final class WikiStore {
     @ObservationIgnored var watcher: FolderWatcher?
     /// Premier chargement du wiki en cours (écran de démarrage).
     var isLaunching = true
+    /// Tous les tags du wiki avec leur nombre de pages (barre latérale, filtres).
+    var tagIndex: [TagInfo] = []
+    /// Filtres de la recherche Cmd+K : dossier (chemin relatif, vide = tout) et tag (clé normalisée).
+    var searchFolderFilter = ""
+    var searchTagFilter: String?
+    /// Fenêtre du mode examen affichée.
+    var isExamPresented = false
     /// Numéro du dernier chargement lancé : un résultat plus ancien arrivé en retard est ignoré.
     @ObservationIgnored var loadGeneration = 0
 
