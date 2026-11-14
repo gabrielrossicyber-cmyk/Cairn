@@ -36,14 +36,14 @@ struct ContentView: View {
                 }
                 .pickerStyle(.segmented)
                 .disabled(store.openURL == nil || store.isOpenPageLocked)
-                .help("Lecture (Cmd+1) · Édition (Cmd+2) · Côte à côte (Cmd+3)")
+                .help(EditorMode.allCases.map { ShortcutSettings.current.help($0.label, $0.shortcutAction) }.joined(separator: " · "))
             }
             // Barre volontairement réduite : 3 boutons. Le reste vit dans « ⋯ » et dans les menus.
             ToolbarItemGroup(placement: .primaryAction) {
                 Button { store.toggleSearch() } label: {
                     Label("Rechercher", systemImage: "magnifyingglass")
                 }
-                .help("Rechercher dans le wiki (Cmd+K)")
+                .help(ShortcutSettings.current.help("Rechercher dans le wiki", .search))
                 .disabled(store.rootURL == nil)
 
                 Menu {
@@ -55,7 +55,8 @@ struct ContentView: View {
                     Label("Ajouter", systemImage: "plus")
                 }
                 .menuIndicator(.hidden)
-                .help("Nouvelle page (Cmd+N), dossier (Cmd+Maj+N) ou import (Cmd+Maj+I)")
+                .help([ShortcutSettings.current.help("Nouvelle page", .newPage), ShortcutSettings.current.help("dossier", .newFolder),
+                       ShortcutSettings.current.help("import", .importDocuments)].joined(separator: ", "))
                 .disabled(store.rootURL == nil)
 
                 Menu {

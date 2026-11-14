@@ -7,6 +7,12 @@ struct SecuWikiApp: App {
     @State private var store = WikiStore()
     @AppStorage(Prefs.appearance) private var appearance = Prefs.Defaults.appearance
     @AppStorage(Prefs.quickCaptureEnabled) private var quickCaptureEnabled = Prefs.Defaults.quickCaptureEnabled
+    /// Raccourcis clavier (Réglages › Raccourcis) : les menus se mettent à jour dès qu'ils changent.
+    @AppStorage(Prefs.shortcuts) private var shortcutsJSON = ""
+
+    private func key(_ action: ShortcutAction) -> KeyboardShortcut? {
+        ShortcutSettings.load(from: shortcutsJSON).shortcut(for: action)
+    }
 
     var body: some Scene {
         WindowGroup(id: "main") {
@@ -19,6 +25,7 @@ struct SecuWikiApp: App {
                 }
                 .onChange(of: appearance) { _, value in Prefs.applyAppearance(value) }
                 .onChange(of: quickCaptureEnabled) { QuickCaptureController.shared.updateHotKey() }
+                .onChange(of: shortcutsJSON) { QuickCaptureController.shared.updateHotKey() }
         }
         // La fenêtre ne peut pas être plus petite que son contenu (plus de débordement).
         .windowResizability(.contentMinSize)
@@ -27,19 +34,19 @@ struct SecuWikiApp: App {
             // Menu Fichier
             CommandGroup(replacing: .newItem) {
                 Button("Nouvelle page…") { store.requestNewPage() }
-                    .keyboardShortcut("n")
+                    .keyboardShortcut(key(.newPage))
                     .disabled(store.rootURL == nil)
                 Button("Nouveau dossier…") { store.requestNewFolder() }
-                    .keyboardShortcut("n", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.newFolder))
                     .disabled(store.rootURL == nil)
                 Button("Importer des documents…") { store.requestImport() }
-                    .keyboardShortcut("i", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.importDocuments))
                     .disabled(store.rootURL == nil)
                 Divider()
                 Button("Nouveau wiki…") { store.createWiki() }
-                    .keyboardShortcut("n", modifiers: [.command, .option])
+                    .keyboardShortcut(key(.newWiki))
                 Button("Ouvrir un wiki existant…") { store.chooseFolder() }
-                    .keyboardShortcut("o")
+                    .keyboardShortcut(key(.openWiki))
                 Menu("Changer de wiki") {
                     ForEach(store.wikis) { wiki in
                         Button(wiki.name) { store.openWiki(wiki.id) }
@@ -50,77 +57,77 @@ struct SecuWikiApp: App {
             }
             CommandGroup(replacing: .saveItem) {
                 Button("Enregistrer") { store.save() }
-                    .keyboardShortcut("s")
+                    .keyboardShortcut(key(.save))
                     .disabled(store.openURL == nil)
             }
             CommandGroup(replacing: .printItem) {
                 Button("Exporter en PDF…") { store.exportPDF() }
-                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.exportPDF))
                     .disabled(store.openURL == nil)
                 Button("Imprimer…") { store.printPage() }
-                    .keyboardShortcut("p")
+                    .keyboardShortcut(key(.printPage))
                     .disabled(store.openURL == nil)
                 Divider()
                 Button("Exporter tout le wiki en PDF (.zip)…") { store.exportWikiAsZip() }
-                    .keyboardShortcut("e", modifiers: [.command, .option])
+                    .keyboardShortcut(key(.exportWiki))
                     .disabled(store.rootURL == nil || store.wikiExport != nil)
             }
             // Menu Format (agit sur l'éditeur actif)
             CommandMenu("Format") {
                 Button("Gras") { MarkdownTextView.perform(#selector(MarkdownTextView.markdownBold(_:))) }
-                    .keyboardShortcut("b")
+                    .keyboardShortcut(key(.bold))
                 Button("Italique") { MarkdownTextView.perform(#selector(MarkdownTextView.markdownItalic(_:))) }
-                    .keyboardShortcut("i")
+                    .keyboardShortcut(key(.italic))
                 Button("Code") { MarkdownTextView.perform(#selector(MarkdownTextView.markdownInlineCode(_:))) }
-                    .keyboardShortcut("c", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.inlineCode))
                 Divider()
                 Button("Insérer un tableau") { MarkdownTextView.perform(#selector(MarkdownTextView.markdownInsertTable(_:))) }
-                    .keyboardShortcut("t", modifiers: [.command, .option])
+                    .keyboardShortcut(key(.insertTable))
                 Button("Insérer une commande bash") { MarkdownTextView.perform(#selector(MarkdownTextView.markdownInsertCode(_:))) }
-                    .keyboardShortcut("c", modifiers: [.command, .option])
+                    .keyboardShortcut(key(.insertCode))
                 Divider()
                 Text("Astuce : tape / dans l'éditeur pour toutes les commandes")
             }
             // Menu Page
             CommandMenu("Page") {
                 Button("Rechercher dans le wiki…") { store.toggleSearch() }
-                    .keyboardShortcut("k")
+                    .keyboardShortcut(key(.search))
                     .disabled(store.rootURL == nil)
                 Button("Tableau de bord") { store.selection = nil }
-                    .keyboardShortcut("d", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.dashboard))
                     .disabled(store.rootURL == nil)
                 Button("Mode examen…") { store.startExam() }
-                    .keyboardShortcut("x", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.exam))
                     .disabled(store.rootURL == nil)
                 Button(store.isLinkMapPresented ? "Revenir à la page" : "Carte des liens") { store.toggleLinkMap() }
-                    .keyboardShortcut("m", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.linkMap))
                     .disabled(store.openURL == nil || store.isOpenPageLocked)
                 Divider()
                 ForEach(EditorMode.allCases) { mode in
                     Button(mode.label) { store.editorMode = mode }
-                        .keyboardShortcut(mode.shortcut)
+                        .keyboardShortcut(key(mode.shortcutAction))
                 }
                 Divider()
                 Button("Sommaire") { store.toggleOutline() }
-                    .keyboardShortcut("o", modifiers: [.command, .shift])
+                    .keyboardShortcut(key(.outline))
                 Button(store.isFocusMode ? "Quitter le mode concentration" : "Mode concentration") {
                     store.isFocusMode.toggle()
                 }
-                .keyboardShortcut("f", modifiers: [.command, .shift])
+                .keyboardShortcut(key(.focusMode))
                 .disabled(store.openURL == nil)
                 Button("Ajouter / retirer des favoris") { store.toggleFavorite() }
-                    .keyboardShortcut("d")
+                    .keyboardShortcut(key(.favorite))
                     .disabled(store.selectedNode == nil)
                 Divider()
                 if store.openPageIsEncrypted {
                     Button("Verrouiller maintenant") { store.relockOpenPage() }
-                        .keyboardShortcut("l")
+                        .keyboardShortcut(key(.lock))
                         .disabled(store.isOpenPageLocked)
                     Button("Retirer le mot de passe") { store.removeLock() }
                         .disabled(store.isOpenPageLocked)
                 } else {
                     Button("Verrouiller avec un mot de passe…") { store.requestLockPage() }
-                        .keyboardShortcut("l")
+                        .keyboardShortcut(key(.lock))
                         .disabled(!store.canLockOpenPage)
                 }
                 Button("Verrouiller toutes les pages") { store.lockAllPages() }
@@ -134,7 +141,7 @@ struct SecuWikiApp: App {
                     .disabled(store.selectedNode == nil)
                 Divider()
                 Button("Rafraîchir") { store.reload() }
-                    .keyboardShortcut("r")
+                    .keyboardShortcut(key(.reload))
                     .disabled(store.rootURL == nil)
             }
 

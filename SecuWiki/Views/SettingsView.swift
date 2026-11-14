@@ -17,10 +17,12 @@ struct SettingsView: View {
                 .tabItem { Label("Modèles et variables", systemImage: "curlybraces") }
             SecretsSettings()
                 .tabItem { Label("Secrets", systemImage: "key") }
+            ShortcutsSettings()
+                .tabItem { Label("Raccourcis", systemImage: "keyboard") }
             ExportSettings()
                 .tabItem { Label("Export", systemImage: "square.and.arrow.up") }
         }
-        .frame(width: 620, height: 480)
+        .frame(width: 680, height: 520)
         // Toute modification des réglages du wiki est enregistrée dans .secuwiki.json.
         .onChange(of: store.wikiSettings) { store.saveWikiSettings() }
     }
@@ -198,7 +200,7 @@ private struct GeneralSettings: View {
                 Text("Les captures d'écran collées dans les pages sont lues en arrière-plan ; Cmd+K trouve leur texte (marqué 🖼). Rien n'est envoyé sur Internet.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Toggle("Capture rapide : icône dans la barre des menus et raccourci ⌃⌥N", isOn: $quickCaptureEnabled)
+                Toggle("Capture rapide : icône dans la barre des menus et raccourci global (réglable dans Raccourcis)", isOn: $quickCaptureEnabled)
             }
 
             Section("Démarrage") {

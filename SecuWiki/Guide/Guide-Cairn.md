@@ -201,9 +201,12 @@ Bouton « Personnaliser » : chiffres clés, compte à rebours (date d'examen), 
 | Aperçu | Taille et largeur du texte, retours à la ligne, schémas, images distantes |
 | Modèles et variables | Modèle par défaut, modèles proposés, variables globales |
 | Secrets | Mots de passe du Trousseau utilisables avec `/secret` |
+| Raccourcis | Changer, retirer ou rétablir chaque raccourci clavier (capture rapide comprise) |
 | Export | Format du papier, réponses masquées dans les PDF |
 
 ## 15. Tous les raccourcis
+
+Ce sont les raccourcis par défaut : **Réglages › Raccourcis** permet de les changer (clic sur un raccourci, puis la nouvelle combinaison).
 
 | Raccourci | Action |
 |---|---|

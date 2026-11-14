@@ -11,22 +11,34 @@ final class QuickCaptureController: NSObject, NSWindowDelegate {
     private weak var store: WikiStore?
     private var panel: NSPanel?
     private var hotKey: GlobalHotKey?
+    /// Combinaison actuellement enregistrée auprès de macOS.
+    private var registeredCombo: KeyCombo?
+    /// Pendant l'enregistrement d'un raccourci dans les Réglages : la capture ne doit pas s'ouvrir.
+    private var isSuspended = false
 
     func configure(store: WikiStore) {
         self.store = store
         updateHotKey()
     }
 
-    /// Active ou coupe le raccourci global selon le réglage.
+    /// Active, change ou coupe le raccourci global selon les réglages (Général et Raccourcis).
     func updateHotKey() {
         let enabled = Prefs.bool(Prefs.quickCaptureEnabled, Prefs.Defaults.quickCaptureEnabled)
-        if enabled, hotKey == nil {
-            hotKey = GlobalHotKey(keyCode: kVK_ANSI_N, modifiers: controlKey | optionKey) { [weak self] in
-                Task { @MainActor in self?.toggle() }
-            }
-        } else if !enabled {
-            hotKey = nil
+        let combo = enabled && !isSuspended ? ShortcutSettings.current.combo(for: .quickCapture) : nil
+        guard combo != registeredCombo || (combo != nil && hotKey == nil) else { return }
+        hotKey = nil // libère l'ancienne combinaison avant d'en enregistrer une autre
+        registeredCombo = nil
+        guard let combo, let keyCode = combo.keyCode else { return }
+        hotKey = GlobalHotKey(keyCode: keyCode, modifiers: combo.carbonModifiers) { [weak self] in
+            Task { @MainActor in self?.toggle() }
         }
+        if hotKey != nil { registeredCombo = combo }
+    }
+
+    /// Suspend le raccourci global (enregistrement d'un raccourci dans les Réglages).
+    func suspendHotKey(_ suspended: Bool) {
+        isSuspended = suspended
+        updateHotKey()
     }
 
     func toggle() {
@@ -145,10 +157,11 @@ struct QuickCaptureView: View {
 /// Menu de l'icône Cairn dans la barre des menus.
 struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
+    @AppStorage(Prefs.shortcuts) private var shortcutsJSON = ""
 
     var body: some View {
         Button("Capture rapide…") { QuickCaptureController.shared.show() }
-            .keyboardShortcut("n", modifiers: [.control, .option])
+            .keyboardShortcut(ShortcutSettings.load(from: shortcutsJSON).shortcut(for: .quickCapture))
         Divider()
         Button("Ouvrir Cairn") {
             NSApp.activate(ignoringOtherApps: true)

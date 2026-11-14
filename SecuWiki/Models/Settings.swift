@@ -17,6 +17,8 @@ enum Prefs {
     static let ocrEnabled = "ocrEnabled"
     static let quickCaptureEnabled = "quickCaptureEnabled"
     static let remoteImages = "remoteImages"
+    /// Raccourcis clavier personnalisés (JSON, voir ShortcutSettings).
+    static let shortcuts = "customShortcuts"
 
     /// Valeurs par défaut.
     enum Defaults {

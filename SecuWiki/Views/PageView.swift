@@ -153,7 +153,7 @@ private struct PageHeader: View {
                 .menuStyle(.borderlessButton)
                 .menuIndicator(.hidden)
                 .fixedSize()
-                .help("Page chiffrée, déverrouillée. Clic : verrouiller (Cmd+L).")
+                .help(ShortcutSettings.current.help("Page chiffrée, déverrouillée. Clic : verrouiller", .lock))
             }
             Button { store.toggleLinkMap() } label: {
                 Image(systemName: "point.3.connected.trianglepath.dotted")
@@ -162,7 +162,7 @@ private struct PageHeader: View {
             }
             .buttonStyle(.borderless)
             .opacity(isHovering ? 1 : 0)
-            .help("Carte des liens de cette page (Cmd+Maj+M)")
+            .help(ShortcutSettings.current.help("Carte des liens de cette page", .linkMap))
             .disabled(store.isOpenPageLocked)
             Button { store.toggleFavorite(node) } label: {
                 Image(systemName: favorite ? "star.fill" : "star")
@@ -171,7 +171,7 @@ private struct PageHeader: View {
             }
             .buttonStyle(.borderless)
             .opacity(favorite || isHovering ? 1 : 0)
-            .help(favorite ? "Retirer des favoris (Cmd+D)" : "Ajouter aux favoris (Cmd+D)")
+            .help(ShortcutSettings.current.help(favorite ? "Retirer des favoris" : "Ajouter aux favoris", .favorite))
         }
         .padding(.horizontal, 18)
         .frame(height: 30)

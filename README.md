@@ -4,6 +4,8 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 
 ## Raccourcis
 
+Raccourcis par défaut ci-dessous. Tous se changent dans **Réglages › Raccourcis** (clic sur le raccourci, puis la nouvelle combinaison ; Échap annule, ⌫ retire, ↺ rétablit). Les combinaisons réservées par macOS (⌘Q, ⌘C, ⌘V…) sont refusées, et une combinaison déjà prise demande confirmation.
+
 | Raccourci | Action |
 |---|---|
 | Cmd+Maj+D | Tableau de bord (pages par section, tâches à faire, questions, modifications récentes) |

@@ -14,15 +14,6 @@ enum EditorMode: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Cmd+1 = Lecture, Cmd+2 = Édition, Cmd+3 = Côte à côte.
-    var shortcut: KeyEquivalent {
-        switch self {
-        case .preview: return "1"
-        case .edit: return "2"
-        case .split: return "3"
-        }
-    }
-
     var icon: String {
         switch self {
         case .preview: return "eye"
