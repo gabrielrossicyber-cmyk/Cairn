@@ -83,13 +83,17 @@ private struct SecretsSettings: View {
             }
 
             Section(store.secretNames.contains(name) ? "Remplacer la valeur" : "Ajouter un secret") {
-                TextField("Nom", text: $name, prompt: Text("ADMIN_DC01"))
+                TextField("Nom", text: $name, prompt: Text("ex. ADMIN_DC01"))
                     .focused($focusedField, equals: .name)
                 SecureField("Valeur", text: $value)
                     .focused($focusedField, equals: .value)
                     .onSubmit(save)
                 HStack {
-                    if !name.isEmpty && !SecretStore.isValidName(name) {
+                    if name.isEmpty && !value.isEmpty {
+                        Text("Donne un nom au secret (champ Nom).")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    } else if !name.isEmpty && !SecretStore.isValidName(name) {
                         Text("Nom : lettres, chiffres, _ et - uniquement (sans espace).")
                             .font(.caption)
                             .foregroundStyle(.red)
@@ -98,6 +102,7 @@ private struct SecretsSettings: View {
                     }
                     Spacer()
                     Button("Enregistrer dans le Trousseau", action: save)
+                        .buttonStyle(.borderedProminent)
                         .disabled(!canSave)
                 }
             }
