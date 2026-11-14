@@ -56,10 +56,14 @@ enum WikiScanner {
     }
 
     private static func sort(_ nodes: [WikiNode], in folder: URL) -> [WikiNode] {
-        let order = OrderFile.read(in: folder) ?? []
+        // Position de chaque nom dans .order, calculée une fois (et non à chaque comparaison du tri).
+        var position: [String: Int] = [:]
+        for (index, key) in (OrderFile.read(in: folder) ?? []).enumerated() where position[key] == nil {
+            position[key] = index
+        }
         return nodes.sorted { a, b in
-            let ia = order.firstIndex(of: a.orderKey) ?? Int.max
-            let ib = order.firstIndex(of: b.orderKey) ?? Int.max
+            let ia = position[a.orderKey] ?? Int.max
+            let ib = position[b.orderKey] ?? Int.max
             if ia != ib { return ia < ib }
             return a.orderKey.localizedStandardCompare(b.orderKey) == .orderedAscending
         }

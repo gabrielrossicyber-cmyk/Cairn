@@ -28,7 +28,17 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 | Clic droit | Renommer, déplacer, monter/descendre, corbeille, afficher dans le Finder |
 | Glisser-déposer | Déplacer une page ou un dossier dans un autre dossier |
 
+## Guide intégré
+
+Chaque nouveau wiki reçoit à sa racine la page `Guide-Cairn.md` : toutes les fonctions, avec des exemples vivants (Cmd+3 pour voir la syntaxe à côté du résultat). Menu **Aide › Guide de Cairn** : l'ouvre, ou la recrée dans le wiki ouvert. Son texte vient de `SecuWiki/Guide/Guide-Cairn.md`.
+
 ## Sécurité et performances
+
+- Images distantes (https) : téléchargées seulement au clic, sauf si Réglages › Aperçu › Confidentialité l'autorise (pas de pistage à l'ouverture d'une page importée).
+- Pages verrouillées : les paramètres lus dans le fichier sont bornés (itérations PBKDF2 entre 100 000 et 5 000 000, sel de 16 octets au moins) : un fichier piégé ne peut ni affaiblir la clé ni bloquer l'app.
+- Fichiers du wiki servis à l'aperçu : les pages web et scripts sont servis en texte brut, les SVG sans script ni réseau ; seule la page d'aperçu peut parler à l'app (pas un document intégré dans un cadre).
+- Secrets : stockés dans le Trousseau de ce Mac uniquement (jamais synchronisés ni restaurés ailleurs). Clic sur une clé 🔑 ou sélection + Cmd+C : la valeur est copiée, puis effacée après 60 s.
+- Export PDF : même liste blanche de navigation que l'aperçu ; un rendu qui échoue ne bloque plus l'export du wiki.
 
 - Aperçu (WebKit) : Content-Security-Policy stricte (seuls les scripts de l'app s'exécutent, aucune connexion sauf images https), HTML brut désactivé, Mermaid en mode strict, navigation en liste blanche.
 - Fichiers du wiki servis à l'aperçu : uniquement dans le dossier du wiki (« .. » et liens symboliques résolus), 300 Mo max. Un lien vers une app ou un script n'est jamais lancé (montré dans le Finder).

@@ -21,6 +21,9 @@ struct LockSession {
 enum PageCrypto {
     static let iterations = 600_000
     static let minimumPasswordLength = 8
+    /// Bornes acceptées pour un fichier existant : en dessous la clé serait trop faible,
+    /// au-dessus un fichier piégé bloquerait l'app pendant des heures (déni de service).
+    private static let acceptedIterations = 100_000...5_000_000
     private static let fence = "```cairn-locked"
 
     enum LockError: LocalizedError {
@@ -149,7 +152,10 @@ enum PageCrypto {
         let base64 = text[start.upperBound..<end.lowerBound].filter { !$0.isWhitespace }
         guard let json = Data(base64Encoded: String(base64)),
               let envelope = try? JSONDecoder().decode(Envelope.self, from: json),
-              envelope.v == 1
+              envelope.v == 1,
+              envelope.alg == "AES-256-GCM", envelope.kdf == "PBKDF2-SHA256",
+              acceptedIterations.contains(envelope.iter),
+              (Data(base64Encoded: envelope.salt)?.count ?? 0) >= 16
         else { throw LockError.damaged }
         return envelope
     }

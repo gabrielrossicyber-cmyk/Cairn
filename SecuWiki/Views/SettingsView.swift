@@ -265,6 +265,7 @@ private struct PreviewSettings: View {
     @AppStorage(Prefs.previewMaxWidth) private var maxWidth = Prefs.Defaults.previewMaxWidth
     @AppStorage(Prefs.lineBreaks) private var lineBreaks = Prefs.Defaults.lineBreaks
     @AppStorage(Prefs.autoVerticalDiagrams) private var autoVertical = Prefs.Defaults.autoVerticalDiagrams
+    @AppStorage(Prefs.remoteImages) private var remoteImages = Prefs.Defaults.remoteImages
 
     var body: some View {
         Form {
@@ -288,6 +289,15 @@ private struct PreviewSettings: View {
             Section("Mise en forme") {
                 Toggle("Un retour à la ligne dans l'éditeur = un retour à la ligne à l'affichage", isOn: $lineBreaks)
                 Toggle("Schémas horizontaux trop larges : les afficher de haut en bas", isOn: $autoVertical)
+            }
+            Section {
+                Toggle("Charger automatiquement les images hébergées sur Internet", isOn: $remoteImages)
+            } header: {
+                Text("Confidentialité")
+            } footer: {
+                Text("Désactivé : une image distante (https://…) n'est téléchargée que si tu cliques dessus. Ouvrir une page importée ne révèle ainsi ni ton adresse IP ni l'heure de lecture au site qui héberge l'image. Les images de ton wiki (assets/) ne sont pas concernées.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

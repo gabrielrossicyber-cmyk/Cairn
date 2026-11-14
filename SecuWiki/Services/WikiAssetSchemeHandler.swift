@@ -35,6 +35,16 @@ final class WikiAssetSchemeHandler: NSObject, WKURLSchemeHandler {
             .contains(url.pathExtension.lowercased()) == false
     }
 
+    /// Type annoncé à l'aperçu. Les pages web et scripts du wiki sont servis comme du texte brut :
+    /// affichés tels quels, jamais interprétés (pas de script d'un fichier importé dans l'aperçu).
+    static func servedMIMEType(for fileURL: URL) -> String {
+        let ext = fileURL.pathExtension.lowercased()
+        if ["html", "htm", "xhtml", "xht", "shtml", "js", "mjs", "xml", "xsl", "xslt", "svgz"].contains(ext) {
+            return "text/plain"
+        }
+        return UTType(filenameExtension: ext)?.preferredMIMEType ?? "application/octet-stream"
+    }
+
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
         guard let url = urlSchemeTask.request.url else {
             urlSchemeTask.didFailWithError(URLError(.fileDoesNotExist))
@@ -50,8 +60,19 @@ final class WikiAssetSchemeHandler: NSObject, WKURLSchemeHandler {
         }
         do {
             let data = try Data(contentsOf: fileURL, options: .mappedIfSafe)
-            let mimeType = UTType(filenameExtension: fileURL.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-            let response = URLResponse(url: url, mimeType: mimeType, expectedContentLength: data.count, textEncodingName: nil)
+            let mimeType = Self.servedMIMEType(for: fileURL)
+            var headers = ["Content-Type": mimeType, "Content-Length": String(data.count)]
+            if mimeType == "text/plain" {
+                // Le type annoncé ne peut pas être « deviné » autrement par WebKit.
+                headers["X-Content-Type-Options"] = "nosniff"
+            }
+            if mimeType == "image/svg+xml" {
+                // Un SVG peut contenir du script : il ne s'exécute jamais et ne contacte pas le réseau.
+                headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+            }
+            let withHeaders: URLResponse? = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)
+            let response = withHeaders
+                ?? URLResponse(url: url, mimeType: mimeType, expectedContentLength: data.count, textEncodingName: nil)
             urlSchemeTask.didReceive(response)
             urlSchemeTask.didReceive(data)
             urlSchemeTask.didFinish()
@@ -80,6 +101,8 @@ struct RenderContext: Encodable, Equatable {
     var interactiveTasks = false
     /// Noms des secrets présents dans le Trousseau (jamais les valeurs) : « 🔑 NOM » en rouge s'il manque.
     var secretNames: [String] = []
+    /// Images hébergées sur Internet : chargées d'office (true) ou seulement au clic (false, par défaut).
+    var remoteImages = Prefs.Defaults.remoteImages
 
     static let empty = RenderContext(base: "", pages: [])
 
@@ -92,7 +115,8 @@ struct RenderContext: Encodable, Equatable {
             maxWidth: Prefs.double(Prefs.previewMaxWidth, Prefs.Defaults.previewMaxWidth),
             breaks: Prefs.bool(Prefs.lineBreaks, Prefs.Defaults.lineBreaks),
             autoVertical: Prefs.bool(Prefs.autoVerticalDiagrams, Prefs.Defaults.autoVerticalDiagrams),
-            printAnswers: Prefs.bool(Prefs.pdfShowAnswers, Prefs.Defaults.pdfShowAnswers)
+            printAnswers: Prefs.bool(Prefs.pdfShowAnswers, Prefs.Defaults.pdfShowAnswers),
+            remoteImages: Prefs.bool(Prefs.remoteImages, Prefs.Defaults.remoteImages)
         )
     }
 }

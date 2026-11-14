@@ -16,6 +16,7 @@ enum Prefs {
     static let appearance = "appearance"
     static let ocrEnabled = "ocrEnabled"
     static let quickCaptureEnabled = "quickCaptureEnabled"
+    static let remoteImages = "remoteImages"
 
     /// Valeurs par défaut.
     enum Defaults {
@@ -31,6 +32,8 @@ enum Prefs {
         static let appearance = "system"
         static let ocrEnabled = true
         static let quickCaptureEnabled = true
+        /// Images hébergées sur Internet : bloquées par défaut (pas de pistage à l'ouverture d'une page).
+        static let remoteImages = false
     }
 
     /// Applique le thème choisi à toute l'app (fenêtres, éditeur, aperçu).
@@ -115,9 +118,12 @@ struct PreviewPrefs: DynamicProperty {
     @AppStorage(Prefs.previewMaxWidth) var maxWidth = Prefs.Defaults.previewMaxWidth
     @AppStorage(Prefs.lineBreaks) var breaks = Prefs.Defaults.lineBreaks
     @AppStorage(Prefs.autoVerticalDiagrams) var autoVertical = Prefs.Defaults.autoVerticalDiagrams
+    @AppStorage(Prefs.remoteImages) var remoteImages = Prefs.Defaults.remoteImages
 
     func context(base: String, pages: [String]) -> RenderContext {
-        RenderContext(base: base, pages: pages, fontSize: fontSize, maxWidth: maxWidth,
-                      breaks: breaks, autoVertical: autoVertical)
+        var context = RenderContext(base: base, pages: pages, fontSize: fontSize, maxWidth: maxWidth,
+                                    breaks: breaks, autoVertical: autoVertical)
+        context.remoteImages = remoteImages
+        return context
     }
 }

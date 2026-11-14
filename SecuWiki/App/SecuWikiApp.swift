@@ -137,6 +137,12 @@ struct SecuWikiApp: App {
                     .keyboardShortcut("r")
                     .disabled(store.rootURL == nil)
             }
+
+            // Menu Aide : la page guide du wiki (recréée si elle a été supprimée).
+            CommandGroup(replacing: .help) {
+                Button("Guide de Cairn") { store.openGuide() }
+                    .disabled(store.rootURL == nil)
+            }
         }
 
         // Fenêtre Réglages (menu SecuWiki > Réglages…, Cmd+,)

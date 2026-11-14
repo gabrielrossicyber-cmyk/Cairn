@@ -199,6 +199,8 @@ struct MarkdownWebView: NSViewRepresentable {
 
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             // Messages venant de la page : types et bornes vérifiés avant tout usage.
+            // Un document affiché dans un cadre (PDF intégré…) n'a pas le droit d'en envoyer.
+            guard message.frameInfo.isMainFrame else { return }
             if message.name == "task", let index = message.body as? Int, (0..<100_000).contains(index) {
                 onToggleTask(index)
                 return

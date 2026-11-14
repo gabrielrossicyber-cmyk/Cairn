@@ -43,6 +43,44 @@
     }
   });
 
+  // Images hébergées sur Internet : par défaut elles ne sont PAS téléchargées à l'ouverture de la page
+  // (une image distante révèle ton adresse IP et l'heure de lecture au site qui l'héberge).
+  // L'adresse est mise de côté avant même d'entrer dans la page ; un clic charge l'image.
+  let blockRemoteImages = true;
+  const allowedRemoteImages = new Set(); // images chargées d'un clic (jusqu'à la fermeture de l'app)
+  const defaultImageRule = md.renderer.rules.image;
+  md.renderer.rules.image = function (tokens, idx, options, env, self) {
+    const token = tokens[idx];
+    const src = token.attrGet('src') || '';
+    if (blockRemoteImages && /^https:/i.test(src) && !allowedRemoteImages.has(src)) {
+      token.attrSet('data-remote-src', src);
+      token.attrs.splice(token.attrIndex('src'), 1);
+    }
+    return defaultImageRule(tokens, idx, options, env, self);
+  };
+
+  function renderRemoteImages(root) {
+    root.querySelectorAll('img[data-remote-src]').forEach(function (img) {
+      const src = img.getAttribute('data-remote-src');
+      let host = '';
+      try { host = new URL(src).hostname; } catch (e) { /* adresse invalide : pas de nom affiché */ }
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'remote-image';
+      button.title = src;
+      button.textContent = 'Image distante' + (host ? ' (' + host + ')' : '') + ' : cliquer pour la charger';
+      button.addEventListener('click', function (event) {
+        event.stopPropagation();
+        allowedRemoteImages.add(src);
+        const loaded = document.createElement('img');
+        loaded.src = src;
+        loaded.alt = img.getAttribute('alt') || '';
+        button.replaceWith(loaded);
+      });
+      img.replaceWith(button);
+    });
+  }
+
   // Chaque bloc garde le numéro de sa ligne dans le texte (data-line) :
   // sert au défilement synchronisé éditeur -> aperçu.
   md.core.ruler.push('source_lines', function (state) {
@@ -610,6 +648,7 @@
     if (context.fontSize) style.setProperty('--font-size', context.fontSize + 'px');
     style.setProperty('--max-width', context.maxWidth > 0 ? context.maxWidth + 'px' : 'none');
     md.set({ breaks: context.breaks !== false });
+    blockRemoteImages = context.remoteImages !== true;
     if (document.body) document.body.classList.toggle('hide-answers', context.printAnswers === false);
   }
 
@@ -693,6 +732,7 @@
     renderSecrets(content, context.secretNames);
     renderTags(content);
     resolveImages(content, context.base);
+    renderRemoteImages(content);
     addCopyButtons(content);
     window.scrollTo(0, resetScroll ? 0 : scrollY);
     if (resetScroll === true) {

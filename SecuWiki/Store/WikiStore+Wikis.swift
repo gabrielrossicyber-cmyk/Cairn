@@ -43,9 +43,13 @@ extension WikiStore {
                 - Cmd+Maj+N : nouveau dossier
                 - Cmd+K : rechercher dans le wiki
                 - `/` dans l'éditeur : tableaux, commandes, schémas, modèles…
+
+                Toutes les fonctions, avec des exemples : [[Guide Cairn]].
                 """
                 try PageTemplate.newPage(title: "Accueil", body: body).write(to: home, atomically: true, encoding: .utf8)
             }
+            // Page guide à la racine : toutes les fonctions de Cairn, avec des exemples vivants.
+            _ = try? Self.writeGuide(in: url)
 
             guard let id = addWiki(url, name: name) else { return }
             openWiki(id)

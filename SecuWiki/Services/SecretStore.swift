@@ -72,7 +72,8 @@ enum SecretStore {
             var item = baseQuery(name)
             item[kSecValueData as String] = data
             item[kSecAttrLabel as String] = "Cairn : \(name)"
-            item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
+            item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            item[kSecAttrSynchronizable as String] = false
             let added = SecItemAdd(item as CFDictionary, nil)
             guard added == errSecSuccess else { throw KeychainError(status: added) }
         } else if status != errSecSuccess {

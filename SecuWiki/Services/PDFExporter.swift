@@ -39,6 +39,35 @@ final class PDFExporter: NSObject, WKNavigationDelegate {
         webView.loadFileURL(html, allowingReadAccessTo: html.deletingLastPathComponent())
     }
 
+    /// Même liste blanche que l'aperçu : seule la page de rendu de l'app et les fichiers du wiki
+    /// intégrés dans un cadre sont chargés ; aucune autre navigation pendant l'export.
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+    ) {
+        guard let url = navigationAction.request.url else { return decisionHandler(.cancel) }
+        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+        let isPreviewPage = url.isFileURL && isMainFrame
+            && url.standardizedFileURL.path == Bundle.main.url(forResource: "preview", withExtension: "html")?.standardizedFileURL.path
+        let isEmbeddedAsset = url.scheme?.lowercased() == WikiAssetSchemeHandler.scheme && !isMainFrame
+        let isBlankFrame = url.absoluteString == "about:blank" && !isMainFrame
+        decisionHandler(isPreviewPage || isEmbeddedAsset || isBlankFrame ? .allow : .cancel)
+    }
+
+    /// Un chargement qui échoue ne doit pas laisser l'export (ou l'export du wiki entier) bloqué.
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        finish("Le rendu de la page a échoué : \(error.localizedDescription)")
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        finish("Le rendu de la page a échoué : \(error.localizedDescription)")
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        finish("Le rendu de la page s'est interrompu.")
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         // « await » : on attend aussi que les schémas Mermaid soient dessinés.
         webView.callAsyncJavaScript(
