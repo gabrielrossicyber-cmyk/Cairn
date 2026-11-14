@@ -88,6 +88,7 @@ struct PageView: View {
     private func preview(_ page: MarkdownPage) -> some View {
         var context = prefs.context(base: store.openURL?.deletingLastPathComponent().path ?? "", pages: store.pageKeys)
         context.interactiveTasks = true
+        context.secretNames = store.secretNames
         return MarkdownWebView(
             markdown: MarkdownPage.substitute(page.body, variables: store.effectiveVariables(page)),
             pageID: store.openURL,

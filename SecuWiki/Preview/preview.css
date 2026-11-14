@@ -112,6 +112,9 @@ a.tag:hover { text-decoration: none; background: color-mix(in srgb, var(--brand)
   background: rgba(255, 159, 10, 0.14);
   border: 1px solid rgba(255, 159, 10, 0.35);
 }
+.secret:not(.secret-missing) { cursor: pointer; }
+.secret:not(.secret-missing):hover { background: rgba(255, 159, 10, 0.26); }
+.secret-copied { color: #2e7d4f !important; border-color: rgba(46, 125, 79, 0.5) !important; }
 .secret-missing { color: #c0392b; background: rgba(224, 90, 98, 0.10); border-style: dashed; border-color: rgba(224, 90, 98, 0.6); }
 @media (prefers-color-scheme: dark) {
   .secret { color: #ffb84d; background: rgba(255, 159, 10, 0.16); }

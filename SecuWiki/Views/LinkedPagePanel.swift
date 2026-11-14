@@ -46,7 +46,11 @@ struct LinkedPagePanel: View {
             MarkdownWebView(
                 markdown: MarkdownPage.substitute(page.body, variables: store.effectiveVariables(page)),
                 pageID: url,
-                context: prefs.context(base: url.deletingLastPathComponent().path, pages: store.pageKeys),
+                context: {
+                    var context = prefs.context(base: url.deletingLastPathComponent().path, pages: store.pageKeys)
+                    context.secretNames = store.secretNames
+                    return context
+                }(),
                 onWikiLink: { store.openWikiLink($0) }
             )
         }

@@ -105,7 +105,8 @@ extension WikiStore {
                 failures.append("• \(item.relativePDF) : \(error.localizedDescription)")
                 continue
             }
-            let context = RenderContext.current(base: item.source.deletingLastPathComponent().path, pages: pageKeys)
+            var context = RenderContext.current(base: item.source.deletingLastPathComponent().path, pages: pageKeys)
+            context.secretNames = secretNames
             if let error = await renderPDF(markdown, context: context, to: target) {
                 failures.append("• \(item.relativePDF) : \(error)")
             }

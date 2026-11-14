@@ -58,6 +58,25 @@
     return text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 
+  // Cmd+C sur une sélection qui contient des « 🔑 NOM » : on copie avec {{secret:NOM}},
+  // et l'app remplace par les valeurs du Trousseau (presse-papiers effacé après 60 s).
+  document.addEventListener('copy', function (event) {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    const fragment = selection.getRangeAt(0).cloneContents();
+    const names = [];
+    fragment.querySelectorAll('.secret:not(.secret-missing)').forEach(function (pill) {
+      if (pill.dataset.secret && names.indexOf(pill.dataset.secret) === -1) names.push(pill.dataset.secret);
+    });
+    if (!names.length || !window.webkit || !window.webkit.messageHandlers.copy) return;
+    let text = selection.toString();
+    names.forEach(function (name) {
+      text = text.split('🔑 ' + name).join('{{secret:' + name + '}}');
+    });
+    event.preventDefault();
+    window.webkit.messageHandlers.copy.postMessage(text);
+  });
+
   // Bouton « Copier » sur chaque bloc de code (sauf les schémas).
   function addCopyButtons(root) {
     root.querySelectorAll('pre:not(.mermaid)').forEach(function (pre) {
@@ -260,8 +279,22 @@
       span.dataset.secret = name;
       span.textContent = '🔑 ' + name;
       span.title = present
-        ? 'Secret « ' + name + ' » (Trousseau) : sa valeur est insérée quand tu copies le bloc'
+        ? 'Secret « ' + name + ' » (Trousseau) : clique pour copier sa valeur (effacée du presse-papiers après 60 s)'
         : 'Secret « ' + name + ' » absent du Trousseau : ajoute-le dans Réglages › Secrets';
+      if (present) {
+        // Clic : copie la valeur seule (l'app la lit dans le Trousseau ; elle n'entre jamais dans la page).
+        span.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          window.webkit.messageHandlers.copy.postMessage('{{secret:' + name + '}}');
+          span.textContent = '✓ copié';
+          span.classList.add('secret-copied');
+          setTimeout(function () {
+            span.textContent = '🔑 ' + name;
+            span.classList.remove('secret-copied');
+          }, 1200);
+        });
+      }
       return span;
     }
     function fill(container, text) {
