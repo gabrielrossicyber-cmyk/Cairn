@@ -6,14 +6,19 @@ struct SecuWikiApp: App {
     /// L'état global du wiki (dossier racine, arborescence, page ouverte).
     @State private var store = WikiStore()
     @AppStorage(Prefs.appearance) private var appearance = Prefs.Defaults.appearance
+    @AppStorage(Prefs.quickCaptureEnabled) private var quickCaptureEnabled = Prefs.Defaults.quickCaptureEnabled
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environment(store)
                 .frame(minWidth: store.requiredMinWidth, minHeight: 550)
-                .onAppear { Prefs.applyAppearance(appearance) }
+                .onAppear {
+                    Prefs.applyAppearance(appearance)
+                    QuickCaptureController.shared.configure(store: store)
+                }
                 .onChange(of: appearance) { _, value in Prefs.applyAppearance(value) }
+                .onChange(of: quickCaptureEnabled) { QuickCaptureController.shared.updateHotKey() }
         }
         // La fenêtre ne peut pas être plus petite que son contenu (plus de débordement).
         .windowResizability(.contentMinSize)
@@ -135,6 +140,11 @@ struct SecuWikiApp: App {
         }
 
         // Fenêtre Réglages (menu SecuWiki > Réglages…, Cmd+,)
+        // Icône dans la barre des menus : capture rapide (⌃⌥N), même fenêtre fermée.
+        MenuBarExtra("Cairn", systemImage: "square.and.pencil", isInserted: $quickCaptureEnabled) {
+            MenuBarContent()
+        }
+
         Settings {
             SettingsView()
                 .environment(store)

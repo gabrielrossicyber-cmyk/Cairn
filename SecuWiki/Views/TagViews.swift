@@ -18,6 +18,7 @@ struct SidebarTagCloud: View {
             FlowLayout(spacing: 5) {
                 ForEach(popular) { tag in
                     TagChip(tag: tag) { store.openSearch(tag: tag.key) }
+                        .contextMenu { TagActions(tag: tag) }
                 }
             }
             Button {
@@ -124,13 +125,14 @@ struct TagBrowser: View {
                     LazyVStack(alignment: .leading, spacing: 2) {
                         ForEach(tags) { tag in
                             TagBrowserRow(tag: tag) { onSelect(tag) }
+                                .contextMenu { TagActions(tag: tag) }
                         }
                     }
                 }
                 .frame(maxHeight: 360)
             }
 
-            Text("\(store.tagIndex.count) tags · ↩ ouvre le premier")
+            Text("\(store.tagIndex.count) tags · ↩ ouvre le premier · clic droit : renommer, fusionner")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -163,6 +165,90 @@ private struct TagBrowserRow: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+    }
+}
+
+/// Menu contextuel d'un tag.
+struct TagActions: View {
+    @Environment(WikiStore.self) private var store
+    let tag: TagInfo
+
+    var body: some View {
+        Button("Pages avec #\(tag.name)") { store.openSearch(tag: tag.key) }
+        Divider()
+        Button("Renommer ou fusionner…") { store.tagToRename = tag }
+        Button("Retirer de toutes les pages…", role: .destructive) { store.tagToRemove = tag }
+    }
+}
+
+/// Fenêtre « Renommer le tag » : si le nouveau nom existe déjà, les deux tags sont fusionnés.
+struct TagRenameSheet: View {
+    @Environment(WikiStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let tag: TagInfo
+    @State private var name: String
+    @FocusState private var isFocused: Bool
+
+    init(tag: TagInfo) {
+        self.tag = tag
+        _name = State(initialValue: tag.name)
+    }
+
+    private var cleaned: String {
+        name.trimmingCharacters(in: CharacterSet(charactersIn: " \t#"))
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    /// Tag existant (autre que celui-ci) qui porte déjà ce nom : fusion.
+    private var mergeTarget: TagInfo? {
+        let key = SearchEngine.normalize(cleaned)
+        return store.tagIndex.first { $0.key == key && $0.key != tag.key }
+    }
+
+    var body: some View {
+        let pages = store.pageCount(forTag: tag.key)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Renommer #\(tag.name)")
+                .font(.title3.weight(.semibold))
+            TextField("Nouveau nom", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .focused($isFocused)
+                .onSubmit(apply)
+
+            if let target = mergeTarget {
+                Label("#\(target.name) existe déjà (\(target.count) page\(target.count > 1 ? "s" : "")) : les deux tags seront **fusionnés**.",
+                      systemImage: "arrow.triangle.merge")
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("\(pages) page\(pages > 1 ? "s" : "") ser\(pages > 1 ? "ont" : "a") modifiée\(pages > 1 ? "s" : "") (en-tête et #tags du texte).")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            if cleaned.contains(" ") {
+                Text("Un nom avec des espaces ne peut pas s'écrire en #tag dans le texte : il sera placé dans l'en-tête des pages.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack {
+                Spacer()
+                Button("Annuler") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button(mergeTarget == nil ? "Renommer" : "Fusionner", action: apply)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(cleaned.isEmpty || cleaned == tag.name)
+            }
+        }
+        .padding(20)
+        .frame(width: 420)
+        .onAppear { isFocused = true }
+    }
+
+    private func apply() {
+        guard !cleaned.isEmpty, cleaned != tag.name else { return }
+        dismiss()
+        store.renameTag(tag.key, to: cleaned)
     }
 }
 

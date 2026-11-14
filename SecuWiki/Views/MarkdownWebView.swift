@@ -204,8 +204,8 @@ struct MarkdownWebView: NSViewRepresentable {
                 return
             }
             guard message.name == "copy", let text = message.body as? String, text.utf16.count <= 5_000_000 else { return }
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
+            // {{secret:NOM}} -> valeur du Trousseau, seulement dans le presse-papiers (effacé après 60 s).
+            SecretStore.copyResolving(text)
         }
     }
 }

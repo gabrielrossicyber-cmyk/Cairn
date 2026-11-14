@@ -21,6 +21,8 @@ struct SearchEntry: Identifiable {
     /// Tags de la page (tels qu'écrits) et leurs clés normalisées (sans accents, minuscules).
     let tags: [String]
     let tagKeys: [String]
+    /// Images locales de la page (chemins), dont le texte est lu par OCR.
+    let imagePaths: [String]
 
     fileprivate let normalizedTitle: String
     fileprivate let normalizedPath: String
@@ -33,7 +35,8 @@ struct SearchEntry: Identifiable {
         pattern: "\\[\\[([^\\]|\\n]+)(?:\\|[^\\]\\n]+)?\\]\\]"
     )
 
-    init(url: URL, title: String, fileName: String, path: String, body: String, tags: [String] = []) {
+    init(url: URL, title: String, fileName: String, path: String, body: String, tags: [String] = [],
+         imagePaths: [String] = [], imageLines: [String] = []) {
         var lines: [String] = []
         var isCode: [Bool] = []
         var links: [String] = []
@@ -56,9 +59,16 @@ struct SearchEntry: Identifiable {
             }
         }
 
+        // Texte lu dans les images : cherchable comme le reste, marqué 🖼 dans les résultats.
+        for line in imageLines {
+            lines.append("🖼 " + line)
+            isCode.append(false)
+        }
+
         self.url = url
         self.title = title
         self.path = path
+        self.imagePaths = imagePaths
         self.lines = lines
         self.isCode = isCode
         self.links = links
@@ -141,9 +151,28 @@ enum SearchEngine {
 
         // Page verrouillée : le contenu chiffré n'est pas indexé (il ne serait que du base64).
         let locked = PageCrypto.isLocked(content)
+
+        // Images de la page : texte déjà lu (cache), sinon lecture lancée en arrière-plan.
+        var imagePaths: [String] = []
+        var imageLines: [String] = []
+        if !locked, ImageOCR.isEnabled {
+            var missing: [URL] = []
+            for image in MarkdownPage.imageReferences(in: page.body, page: url, root: root) {
+                imagePaths.append(image.standardizedFileURL.path)
+                if let text = ImageOCR.shared.cachedText(for: image) {
+                    imageLines += text.split(separator: "\n").map(String.init)
+                        .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                } else {
+                    missing.append(image)
+                }
+            }
+            if !missing.isEmpty { ImageOCR.shared.enqueue(missing) }
+        }
+
         var entry = SearchEntry(url: url, title: title, fileName: names.last ?? title,
                                 path: names.joined(separator: " › "), body: locked ? "" : page.body,
-                                tags: locked ? [] : MarkdownPage.tags(in: content))
+                                tags: locked ? [] : MarkdownPage.tags(in: content),
+                                imagePaths: imagePaths, imageLines: imageLines)
         entry.isLocked = locked
         // Date réelle du fichier (sert aussi de clé du cache de l'index) ; « maintenant » s'il vient d'être écrit.
         var fileURL = url

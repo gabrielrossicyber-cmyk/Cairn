@@ -101,6 +101,23 @@ a.tag {
 a.tag:hover { text-decoration: none; background: color-mix(in srgb, var(--brand) 22%, transparent); }
 @media print { a.tag { background: none; padding: 0; } }
 
+/* {{secret:NOM}} : masqué, la valeur n'est jamais dans la page */
+.secret {
+  display: inline-block;
+  padding: 0 0.45em;
+  border-radius: 5px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.9em;
+  color: #9a5b00;
+  background: rgba(255, 159, 10, 0.14);
+  border: 1px solid rgba(255, 159, 10, 0.35);
+}
+.secret-missing { color: #c0392b; background: rgba(224, 90, 98, 0.10); border-style: dashed; border-color: rgba(224, 90, 98, 0.6); }
+@media (prefers-color-scheme: dark) {
+  .secret { color: #ffb84d; background: rgba(255, 159, 10, 0.16); }
+  .secret-missing { color: #f08a90; }
+}
+
 /* Langage du bloc de code (s'efface au survol, laisse la place à « Copier ») */
 .code-lang {
   position: absolute;

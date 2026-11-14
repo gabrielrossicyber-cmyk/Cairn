@@ -33,6 +33,10 @@ struct SlashCommand: Identifiable {
                      icon: "questionmark.bubble", aliases: ["quiz", "flashcard", "carte"]) {
             "**Question :** ⟦Ta question⟧\n\n> [!REPONSE]\n> \n"
         },
+        SlashCommand(trigger: "secret", title: "Secret du Trousseau", detail: "{{secret:NOM}} : masqué à l'écran, inséré seulement à la copie",
+                     icon: "key", aliases: ["motdepasse", "password", "trousseau"]) {
+            "{{secret:⟦NOM⟧}}"
+        },
         SlashCommand(trigger: "reponse", title: "Réponse masquée", detail: "Encadré gris replié, cliquer pour afficher",
                      icon: "eye.slash", aliases: ["solution", "cacher"]) {
             "> [!REPONSE]\n> ⟦réponse⟧\n"

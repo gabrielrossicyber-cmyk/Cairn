@@ -14,6 +14,8 @@ enum Prefs {
     static let pdfPaper = "pdfPaper"
     static let pdfShowAnswers = "pdfShowAnswers"
     static let appearance = "appearance"
+    static let ocrEnabled = "ocrEnabled"
+    static let quickCaptureEnabled = "quickCaptureEnabled"
 
     /// Valeurs par défaut.
     enum Defaults {
@@ -27,6 +29,8 @@ enum Prefs {
         static let pdfPaper = "A4"
         static let pdfShowAnswers = true
         static let appearance = "system"
+        static let ocrEnabled = true
+        static let quickCaptureEnabled = true
     }
 
     /// Applique le thème choisi à toute l'app (fenêtres, éditeur, aperçu).

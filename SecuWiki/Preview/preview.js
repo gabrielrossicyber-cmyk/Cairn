@@ -75,8 +75,13 @@
       button.className = 'copy-btn';
       button.textContent = 'Copier';
       button.addEventListener('click', function () {
-        const code = pre.querySelector('code');
-        const text = (code ? code.textContent : pre.textContent).replace(/\n$/, '');
+        // Les secrets redeviennent {{secret:NOM}} : l'app insère la valeur du Trousseau à la copie.
+        const source = (pre.querySelector('code') || pre).cloneNode(true);
+        source.querySelectorAll('.secret').forEach(function (pill) {
+          pill.replaceWith('{{secret:' + pill.dataset.secret + '}}');
+        });
+        source.querySelectorAll('.copy-btn, .code-lang').forEach(function (el) { el.remove(); });
+        const text = source.textContent.replace(/\n$/, '');
         window.webkit.messageHandlers.copy.postMessage(text);
         button.textContent = 'Copié ✓';
         setTimeout(function () { button.textContent = 'Copier'; }, 1500);
@@ -240,6 +245,60 @@
         last = pattern.lastIndex;
       }
       fragment.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(fragment, node);
+    });
+  }
+
+  // {{secret:NOM}} -> « 🔑 NOM » (la valeur n'arrive jamais dans la page ; elle est insérée à la copie).
+  const secretPattern = /\{\{\s*secret:([A-Za-z0-9_-]+)\s*\}\}/g;
+  function renderSecrets(root, known) {
+    const names = new Set(known || []);
+    function pill(name) {
+      const span = document.createElement('span');
+      const present = names.has(name);
+      span.className = present ? 'secret' : 'secret secret-missing';
+      span.dataset.secret = name;
+      span.textContent = '🔑 ' + name;
+      span.title = present
+        ? 'Secret « ' + name + ' » (Trousseau) : sa valeur est insérée quand tu copies le bloc'
+        : 'Secret « ' + name + ' » absent du Trousseau : ajoute-le dans Réglages › Secrets';
+      return span;
+    }
+    function fill(container, text) {
+      let last = 0;
+      let match;
+      secretPattern.lastIndex = 0;
+      while ((match = secretPattern.exec(text))) {
+        container.appendChild(document.createTextNode(text.slice(last, match.index)));
+        container.appendChild(pill(match[1]));
+        last = secretPattern.lastIndex;
+      }
+      container.appendChild(document.createTextNode(text.slice(last)));
+    }
+    // Code : la coloration découpe le texte en morceaux ; on reconstruit le bloc en texte simple.
+    root.querySelectorAll('code').forEach(function (code) {
+      const text = code.textContent;
+      secretPattern.lastIndex = 0;
+      if (!secretPattern.test(text)) return;
+      code.textContent = '';
+      fill(code, text);
+    });
+    // Texte normal
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        return node.parentElement && node.parentElement.closest('code, .secret')
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = [];
+    while (walker.nextNode()) {
+      if (walker.currentNode.nodeValue.indexOf('{{') !== -1) nodes.push(walker.currentNode);
+    }
+    nodes.forEach(function (node) {
+      secretPattern.lastIndex = 0;
+      if (!secretPattern.test(node.nodeValue)) return;
+      const fragment = document.createDocumentFragment();
+      fill(fragment, node.nodeValue);
       node.parentNode.replaceChild(fragment, node);
     });
   }
@@ -598,6 +657,7 @@
     renderCallouts(content);
     renderTaskLists(content, context.interactiveTasks === true);
     renderWikiLinks(content, context.pages, context.base);
+    renderSecrets(content, context.secretNames);
     renderTags(content);
     resolveImages(content, context.base);
     addCopyButtons(content);

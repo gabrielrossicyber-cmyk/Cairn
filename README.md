@@ -12,6 +12,7 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 | Cmd+D | Ajouter / retirer la page des favoris |
 | Cmd+Maj+O | Afficher le sommaire de la page |
 | Cmd+Maj+F | Mode concentration (masque l'arborescence et les barres) |
+| ⌃⌥N (partout) | Capture rapide dans « Boîte de réception » |
 | Cmd+Maj+M | Carte des liens de la page ouverte |
 | Cmd+Maj+X | Mode examen chronométré |
 | Cmd+L | Verrouiller la page avec un mot de passe / la reverrouiller |
@@ -38,6 +39,20 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 
 Réglages (Cmd+,) › Général › Thème : comme le système, clair ou sombre. Les PDF et l'impression restent toujours en clair.
 
+## Secrets (Trousseau)
+
+- Réglages › Secrets : enregistre un mot de passe sous un nom (`ADMIN_DC01`). Il va dans le Trousseau de ce Mac, pas dans le wiki.
+- Dans une page : `{{secret:ADMIN_DC01}}` (ou `/secret`). L'aperçu et les PDF affichent « 🔑 ADMIN_DC01 » (rouge s'il manque dans le Trousseau).
+- Le bouton « Copier » d'un bloc de code insère la vraie valeur, uniquement dans le presse-papiers : marqué confidentiel et effacé après 60 secondes.
+
+## Recherche dans les images (OCR)
+
+Les captures d'écran des pages sont lues en arrière-plan par macOS (Vision, en local) ; Cmd+K trouve leur texte, marqué 🖼. Cache hors du wiki (dossier Caches de l'app), limité aux images encore utilisées. Désactivable dans Réglages › Général.
+
+## Capture rapide
+
+⌃⌥N n'importe où (ou l'icône ✎ de la barre des menus) : une fenêtre flottante, la 1re ligne devient le titre, ⌘↩ enregistre dans `Boîte-de-réception/`. La page ouverte n'est pas dérangée.
+
 ## Couleurs de dossier
 
 Clic droit sur un dossier › Couleur du dossier (12 couleurs, ou aucune). La couleur est enregistrée dans un fichier caché `.color` du dossier : elle le suit quand on le renomme, le déplace ou le duplique, et se synchronise avec iCloud.
@@ -48,6 +63,7 @@ Clic droit sur un dossier › Couleur du dossier (12 couleurs, ou aucune). La co
 - Dans le texte : `#iam`, `#ISO27001` (un seul mot, pas dans le code ; « # Titre » avec espace reste un titre).
 - Majuscules et accents ignorés : `#Réseau` = `#reseau`.
 - Clic sur un tag (page, en-tête, barre latérale › Tags) : recherche filtrée sur ce tag.
+- Clic droit sur un tag : **Renommer ou fusionner** (si le nom existe déjà, les deux tags sont fusionnés) ou **Retirer de toutes les pages** (le mot reste, sans « # »).
 - Barre latérale : les 12 tags les plus utilisés en pastilles ; « Tous les tags » ouvre un panneau avec filtre au clavier et tri (les plus utilisés / A → Z). Même panneau pour le filtre Tag de Cmd+K.
 
 ## Carte des liens (Cmd+Maj+M)

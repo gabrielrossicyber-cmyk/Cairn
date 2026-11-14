@@ -258,8 +258,7 @@ private struct ResultRow: View {
             Spacer(minLength: 0)
             if result.snippetIsCode, let snippet = result.snippet {
                 Button("Copier") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(snippet, forType: .string)
+                    SecretStore.copyResolving(snippet)
                 }
                 .buttonStyle(.borderless)
                 .font(.caption)

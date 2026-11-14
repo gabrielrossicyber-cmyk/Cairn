@@ -87,6 +87,12 @@ final class WikiStore {
     /// Filtres de la recherche Cmd+K : dossier (chemin relatif, vide = tout) et tag (clé normalisée).
     var searchFolderFilter = ""
     var searchTagFilter: String?
+    /// Noms des secrets du Trousseau (les valeurs ne sont jamais gardées ici).
+    var secretNames: [String] = []
+    @ObservationIgnored var secretObserver: NSObjectProtocol?
+    /// Tag à renommer / fusionner, ou à retirer (fenêtres ouvertes depuis la liste des tags).
+    var tagToRename: TagInfo?
+    var tagToRemove: TagInfo?
     /// Fenêtre « Nouveau dossier » affichée (avec son emplacement proposé).
     var newFolderRequest: NewPageRequest?
     /// Fenêtre du mode examen affichée.
@@ -122,6 +128,13 @@ final class WikiStore {
         }
         // Reverrouille les pages quand le Mac se met en veille ou que la session est verrouillée.
         startAutoLock()
+        // Texte des images (OCR) : quand des images viennent d'être lues, leurs pages sont réindexées.
+        ImageOCR.shared.onRecognized = { [weak self] paths in self?.refreshEntries(forImages: paths) }
+        // Liste des secrets (noms seulement), tenue à jour quand on en ajoute ou retire.
+        secretNames = SecretStore.names()
+        secretObserver = NotificationCenter.default.addObserver(forName: SecretStore.didChange, object: nil, queue: .main) { [weak self] _ in
+            self?.secretNames = SecretStore.names()
+        }
         // Rouvre le dernier wiki utilisé.
         wikis = FolderAccess.loadList()
         if let id = FolderAccess.currentID ?? wikis.first?.id {
@@ -159,6 +172,7 @@ final class WikiStore {
         closeFile()
         loadPinned()
         loadWikiSettings()
+        ImageOCR.shared.open(root: url)
         if inBackground {
             nodes = []
             searchIndex = []
@@ -248,6 +262,23 @@ final class WikiStore {
             searchIndex = snapshot.index
             rebuildPageLookup()
         }
+        // Le cache OCR ne garde que les images encore utilisées par une page non verrouillée.
+        if ImageOCR.isEnabled {
+            ImageOCR.shared.prune(keeping: Set(snapshot.index.flatMap(\.imagePaths)))
+        }
+    }
+
+    /// Réindexe les pages dont des images viennent d'être lues par OCR.
+    func refreshEntries(forImages paths: Set<String>) {
+        guard let rootURL else { return }
+        var changed = false
+        for (index, entry) in searchIndex.enumerated() where !paths.isDisjoint(with: entry.imagePaths) {
+            if let fresh = SearchEngine.entry(for: entry.url, root: rootURL) {
+                searchIndex[index] = fresh
+                changed = true
+            }
+        }
+        if changed { rebuildPageLookup() }
     }
 
     // MARK: Rafraîchissement automatique

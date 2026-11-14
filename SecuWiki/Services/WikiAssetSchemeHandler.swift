@@ -78,6 +78,8 @@ struct RenderContext: Encodable, Equatable {
     var printAnswers = Prefs.Defaults.pdfShowAnswers
     /// Cases à cocher cliquables (aperçu principal uniquement).
     var interactiveTasks = false
+    /// Noms des secrets présents dans le Trousseau (jamais les valeurs) : « 🔑 NOM » en rouge s'il manque.
+    var secretNames: [String] = []
 
     static let empty = RenderContext(base: "", pages: [])
 

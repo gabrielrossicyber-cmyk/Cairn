@@ -198,6 +198,21 @@ private struct WikiDialogs: ViewModifier {
                 NewPageSheet(folder: request.folder)
                     .environment(store)
             }
+            .sheet(item: Binding(get: { store.tagToRename }, set: { store.tagToRename = $0 })) { tag in
+                TagRenameSheet(tag: tag)
+                    .environment(store)
+            }
+            .confirmationDialog(
+                "Retirer #\(store.tagToRemove?.name ?? "") de toutes les pages ?",
+                isPresented: Binding(get: { store.tagToRemove != nil }, set: { if !$0 { store.tagToRemove = nil } })
+            ) {
+                Button("Retirer le tag", role: .destructive) {
+                    if let tag = store.tagToRemove { store.renameTag(tag.key, to: nil) }
+                    store.tagToRemove = nil
+                }
+            } message: {
+                Text("Le tag disparaît de l'en-tête des pages ; dans le texte, « #mot » devient « mot ». Le contenu n'est pas supprimé.")
+            }
             .sheet(item: Binding(get: { store.newFolderRequest }, set: { store.newFolderRequest = $0 })) { request in
                 NewFolderSheet(folder: request.folder)
                     .environment(store)

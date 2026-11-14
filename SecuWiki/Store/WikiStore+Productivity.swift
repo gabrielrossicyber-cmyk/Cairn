@@ -101,7 +101,9 @@ extension WikiStore {
 
     /// Informations pour l'aperçu : dossier de la page (images) et pages existantes (liens).
     var renderContext: RenderContext {
-        RenderContext.current(base: openURL?.deletingLastPathComponent().path ?? "", pages: pageKeys)
+        var context = RenderContext.current(base: openURL?.deletingLastPathComponent().path ?? "", pages: pageKeys)
+        context.secretNames = secretNames
+        return context
     }
 
     // MARK: Favoris et récents

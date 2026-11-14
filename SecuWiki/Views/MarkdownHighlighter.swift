@@ -45,7 +45,7 @@ enum MarkdownHighlighter {
                                                dark: NSColor(calibratedRed: 0.45, green: 0.67, blue: 1.0, alpha: 1))
 
     private enum Style {
-        case heading1, heading2, heading3, bold, list, quote, link, wikiLink, tag, inlineCode, codeBlock, frontMatter, frontMatterTags, variable
+        case heading1, heading2, heading3, bold, list, quote, link, wikiLink, tag, inlineCode, codeBlock, frontMatter, frontMatterTags, variable, secret
     }
 
     /// Règles appliquées dans l'ordre : la dernière gagne en cas de chevauchement.
@@ -69,6 +69,7 @@ enum MarkdownHighlighter {
             (regex("\\A---\\n[\\s\\S]*?\\n---[ \\t]*$"), .frontMatter),           // en-tête YAML
             (regex("^tags:[ \\t]*(\\S.*)$"), .frontMatterTags),                  // tags: iam, iso27001 (dans l'en-tête)
             (regex("\\{\\{\\s*[A-Za-z0-9_]+\\s*\\}\\}"), .variable),               // {{VARIABLE}}
+            (regex("\\{\\{\\s*secret:[A-Za-z0-9_\\-]+\\s*\\}\\}"), .secret),     // {{secret:NOM}}
         ]
     }()
 
@@ -115,6 +116,8 @@ enum MarkdownHighlighter {
             return [.font: NSFont.monospacedSystemFont(ofSize: max(size - 2, 9), weight: .regular), .foregroundColor: faintColor]
         case .variable:
             return [.foregroundColor: NSColor.systemTeal, .font: boldFont]
+        case .secret:
+            return [.foregroundColor: NSColor.systemOrange, .font: boldFont]
         }
     }
 

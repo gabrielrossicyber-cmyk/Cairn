@@ -15,12 +15,122 @@ struct SettingsView: View {
                 .tabItem { Label("Aperçu", systemImage: "eye") }
             TemplatesSettings()
                 .tabItem { Label("Modèles et variables", systemImage: "curlybraces") }
+            SecretsSettings()
+                .tabItem { Label("Secrets", systemImage: "key") }
             ExportSettings()
                 .tabItem { Label("Export", systemImage: "square.and.arrow.up") }
         }
-        .frame(width: 580, height: 460)
+        .frame(width: 620, height: 480)
         // Toute modification des réglages du wiki est enregistrée dans .secuwiki.json.
         .onChange(of: store.wikiSettings) { store.saveWikiSettings() }
+    }
+}
+
+// MARK: Secrets
+
+/// Secrets du Trousseau : on voit et gère les noms, jamais les valeurs.
+private struct SecretsSettings: View {
+    @Environment(WikiStore.self) private var store
+    @State private var name = ""
+    @State private var value = ""
+    @State private var message: String?
+    @State private var pendingDelete: String?
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case name, value }
+
+    private var canSave: Bool { SecretStore.isValidName(name) && !value.isEmpty }
+
+    var body: some View {
+        Form {
+            Section {
+                Text("Écris `{{secret:NOM}}` dans une page (ou tape /secret). Le fichier ne contient que ce nom ; l'aperçu et les PDF affichent « 🔑 NOM ». La vraie valeur n'est insérée que lorsque tu copies le bloc de code, puis effacée du presse-papiers après 60 secondes.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Section("Secrets enregistrés sur ce Mac") {
+                if store.secretNames.isEmpty {
+                    Text("Aucun secret pour l'instant.")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(store.secretNames, id: \.self) { secret in
+                    HStack {
+                        Image(systemName: "key.fill").foregroundStyle(.orange)
+                        Text("{{secret:\(secret)}}")
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                        Spacer()
+                        Button("Copier la référence") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString("{{secret:\(secret)}}", forType: .string)
+                        }
+                        .buttonStyle(.borderless)
+                        Button("Remplacer…") {
+                            name = secret
+                            value = ""
+                            focusedField = .value
+                        }
+                        .buttonStyle(.borderless)
+                        Button(role: .destructive) { pendingDelete = secret } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Supprimer du Trousseau")
+                    }
+                }
+            }
+
+            Section(store.secretNames.contains(name) ? "Remplacer la valeur" : "Ajouter un secret") {
+                TextField("Nom", text: $name, prompt: Text("ADMIN_DC01"))
+                    .focused($focusedField, equals: .name)
+                SecureField("Valeur", text: $value)
+                    .focused($focusedField, equals: .value)
+                    .onSubmit(save)
+                HStack {
+                    if !name.isEmpty && !SecretStore.isValidName(name) {
+                        Text("Nom : lettres, chiffres, _ et - uniquement (sans espace).")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else if let message {
+                        Text(message).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Enregistrer dans le Trousseau", action: save)
+                        .disabled(!canSave)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .confirmationDialog("Supprimer le secret « \(pendingDelete ?? "") » ?",
+                            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } })) {
+            Button("Supprimer", role: .destructive) {
+                if let secret = pendingDelete {
+                    do {
+                        try SecretStore.delete(secret)
+                        message = "« \(secret) » supprimé."
+                    } catch {
+                        message = error.localizedDescription
+                    }
+                }
+                pendingDelete = nil
+            }
+        } message: {
+            Text("Les pages qui l'utilisent afficheront « 🔑 \(pendingDelete ?? "") » en rouge.")
+        }
+    }
+
+    private func save() {
+        guard canSave else { return }
+        do {
+            try SecretStore.set(value, for: name)
+            message = "« \(name) » enregistré dans le Trousseau."
+            name = ""
+            value = ""
+        } catch {
+            message = error.localizedDescription
+        }
     }
 }
 
@@ -30,6 +140,8 @@ private struct GeneralSettings: View {
     @Environment(WikiStore.self) private var store
     @AppStorage(Prefs.defaultMode) private var defaultMode = Prefs.Defaults.defaultMode
     @AppStorage(Prefs.appearance) private var appearance = Prefs.Defaults.appearance
+    @AppStorage(Prefs.ocrEnabled) private var ocrEnabled = Prefs.Defaults.ocrEnabled
+    @AppStorage(Prefs.quickCaptureEnabled) private var quickCaptureEnabled = Prefs.Defaults.quickCaptureEnabled
 
     var body: some View {
         @Bindable var store = store
@@ -74,6 +186,14 @@ private struct GeneralSettings: View {
                     Text("Sombre").tag("dark")
                 }
                 .pickerStyle(.segmented)
+            }
+
+            Section("Recherche et capture") {
+                Toggle("Chercher aussi dans le texte des images (OCR, sur ce Mac)", isOn: $ocrEnabled)
+                Text("Les captures d'écran collées dans les pages sont lues en arrière-plan ; Cmd+K trouve leur texte (marqué 🖼). Rien n'est envoyé sur Internet.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Toggle("Capture rapide : icône dans la barre des menus et raccourci ⌃⌥N", isOn: $quickCaptureEnabled)
             }
 
             Section("Démarrage") {
