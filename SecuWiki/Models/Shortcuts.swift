@@ -45,7 +45,7 @@ struct KeyCombo: Codable, Hashable {
 
     /// Raccourci SwiftUI (menus). nil si la touche n'est pas représentable.
     var keyboardShortcut: KeyboardShortcut? {
-        var modifiers: EventModifiers = []
+        var modifiers: SwiftUI.EventModifiers = []
         if command { modifiers.insert(.command) }
         if shift { modifiers.insert(.shift) }
         if option { modifiers.insert(.option) }
@@ -302,7 +302,7 @@ struct ShortcutSettings: Codable, Equatable {
     func problem(with combo: KeyCombo, for action: ShortcutAction) -> Problem? {
         if !combo.isUsable { return .unusable }
         if Self.reserved.contains(where: { $0.sameKeys(as: combo) }) { return .reserved }
-        if let other = action(using: combo), other != action { return .usedBy(other) }
+        if let other = self.action(using: combo), other != action { return .usedBy(other) }
         return nil
     }
 
