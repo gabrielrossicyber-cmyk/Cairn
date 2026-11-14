@@ -28,6 +28,16 @@ App macOS (puis iOS) de documentation technique, en fichiers Markdown locaux. É
 | Clic droit | Renommer, déplacer, monter/descendre, corbeille, afficher dans le Finder |
 | Glisser-déposer | Déplacer une page ou un dossier dans un autre dossier |
 
+## Tests automatisés
+
+```bash
+swift test
+```
+
+- `Tests/CairnTests/` : en-tête et variables des pages, tags (lecture, renommage, fusion), chiffrement des pages (dont fichiers piégés), recherche, liens, noms de fichiers, tableaux, notes d'examen, fichiers servis à l'aperçu (sortie du dossier, liens symboliques, exécutables), import HTML, arborescence et `.order`, guide.
+- `Package.swift` compile le code de `SecuWiki/` comme une bibliothèque, uniquement pour les tests ; l'app se compile toujours avec `SecuWiki.xcodeproj`.
+- GitHub Actions (`.github/workflows/ci.yml`) : à chaque push, les tests puis la compilation de l'app.
+
 ## Guide intégré
 
 Chaque nouveau wiki reçoit à sa racine la page `Guide-Cairn.md` : toutes les fonctions, avec des exemples vivants (Cmd+3 pour voir la syntaxe à côté du résultat). Menu **Aide › Guide de Cairn** : l'ouvre, ou la recrée dans le wiki ouvert. Son texte vient de `SecuWiki/Guide/Guide-Cairn.md`.

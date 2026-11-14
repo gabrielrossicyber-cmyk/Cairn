@@ -14,3 +14,8 @@ xcuserdata/
 BF-CYBER-2026/
 Wiki-Exemple/
 *.secuwiki.json
+
+# Tests (SwiftPM)
+.build/
+.swiftpm/
+Package.resolved

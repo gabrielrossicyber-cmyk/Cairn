@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests et compilation
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Tests unitaires (swift test)
+        run: swift test
+
+      - name: Compilation de l'app (Xcode)
+        run: |
+          xcodebuild -project SecuWiki.xcodeproj -target SecuWiki -configuration Debug build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" | tail -n 40
+          test -d build/Debug/Cairn.app

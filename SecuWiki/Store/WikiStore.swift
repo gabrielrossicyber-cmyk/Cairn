@@ -151,9 +151,15 @@ final class WikiStore {
     func openWiki(_ id: UUID, inBackground: Bool = false) {
         guard let index = wikis.firstIndex(where: { $0.id == id }) else { isLaunching = false; return }
         var reference = wikis[index]
-        guard let url = FolderAccess.resolve(&reference) else {
+        var resolved = FolderAccess.resolve(&reference)
+        if let found = resolved, FolderAccess.isUnavailable(found) {
+            // Dossier supprimé ou mis à la corbeille : ce n'est plus un wiki utilisable.
+            found.stopAccessingSecurityScopedResource()
+            resolved = nil
+        }
+        guard let url = resolved else {
             isLaunching = false
-            errorMessage = "Impossible d'ouvrir « \(reference.name) » : le dossier a été déplacé ou supprimé. Retire-le de la liste puis rouvre-le avec « Ouvrir un wiki existant »."
+            offerToForget(reference)
             return
         }
         wikis[index] = reference
@@ -185,6 +191,22 @@ final class WikiStore {
             reload()
         }
         startWatching()
+    }
+
+    /// Dossier introuvable : propose de retirer le wiki de la liste (sinon il y resterait pour toujours).
+    private func offerToForget(_ reference: WikiReference) {
+        // Après le tour de boucle en cours : jamais de fenêtre modale pendant le démarrage de l'app.
+        DispatchQueue.main.async { [weak self] in
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Le dossier de « \(reference.name) » est introuvable"
+            alert.informativeText = "Il a été supprimé, déplacé ou mis à la corbeille.\n\nTu peux le retirer de la liste. Si tu l'as seulement déplacé, retire-le puis rouvre-le avec « Ouvrir un wiki existant »."
+            alert.addButton(withTitle: "Retirer de la liste")
+            alert.addButton(withTitle: "Garder dans la liste")
+            if alert.runModal() == .alertFirstButtonReturn {
+                self?.removeWiki(reference.id)
+            }
+        }
     }
 
     /// Ouvrir un wiki existant (Cmd+O).

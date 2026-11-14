@@ -79,6 +79,20 @@ enum FolderAccess {
         return url
     }
 
+    /// Le dossier n'existe plus, ou se trouve dans une corbeille (un signet suit le dossier jusque-là).
+    static func isUnavailable(_ url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
+            return true
+        }
+        return isInTrash(url.standardizedFileURL.path)
+    }
+
+    /// Corbeille du compte (~/.Trash), d'un disque externe (.Trashes) ou d'iCloud Drive (.Trash).
+    static func isInTrash(_ path: String) -> Bool {
+        path.components(separatedBy: "/").contains { $0 == ".Trash" || $0 == ".Trashes" }
+    }
+
     // MARK: Liste des wikis
 
     static func loadList() -> [WikiReference] {

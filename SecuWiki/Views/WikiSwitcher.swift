@@ -22,9 +22,16 @@ struct WikiSwitcher: View {
             Divider()
             Button("Nouveau wiki…") { store.createWiki() }
             Button("Ouvrir un wiki existant…") { store.chooseFolder() }
-            if let current = store.currentWikiID {
+            if !store.wikis.isEmpty {
                 Divider()
-                Button("Retirer ce wiki de la liste") { store.removeWiki(current) }
+                // N'importe quel wiki peut être retiré, même un dossier supprimé qu'on ne peut plus ouvrir.
+                Menu("Retirer de la liste") {
+                    ForEach(store.wikis) { wiki in
+                        Button(wiki.name) { store.removeWiki(wiki.id) }
+                    }
+                    Divider()
+                    Text("Le dossier et ses pages ne sont pas supprimés")
+                }
             }
         } label: {
             HStack(spacing: 8) {
