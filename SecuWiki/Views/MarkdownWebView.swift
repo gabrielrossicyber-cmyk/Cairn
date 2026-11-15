@@ -40,6 +40,10 @@ struct MarkdownWebView: NSViewRepresentable {
     let pageID: URL?
     var context: RenderContext = .empty
     var tocRequest: TOCRequest?
+    /// Recherche dans la page (Cmd+F, résultat de Cmd+K).
+    var findRequest: FindRequest?
+    /// Nombre de résultats et position du résultat courant, renvoyés par la page.
+    var onFindResult: (Int, Int) -> Void = { _, _ in }
     /// Clic sur un lien [[Page]].
     var onWikiLink: (String) -> Void = { _ in }
     /// Clic sur un #tag.
@@ -57,6 +61,8 @@ struct MarkdownWebView: NSViewRepresentable {
         configuration.userContentController.add(context.coordinator, name: "copy")
         // Les cases à cocher cliquées dans l'aperçu.
         configuration.userContentController.add(context.coordinator, name: "task")
+        // Le résultat d'une recherche dans la page (nombre de résultats).
+        configuration.userContentController.add(context.coordinator, name: "find")
         // Les images du wiki passent par l'app (voir WikiAssetSchemeHandler).
         configuration.setURLSchemeHandler(WikiAssetSchemeHandler(), forURLScheme: WikiAssetSchemeHandler.scheme)
 
@@ -77,14 +83,17 @@ struct MarkdownWebView: NSViewRepresentable {
         context.coordinator.onWikiLink = onWikiLink
         context.coordinator.onTag = onTag
         context.coordinator.onToggleTask = onToggleTask
+        context.coordinator.onFindResult = onFindResult
         scrollSync?.webView = webView
         context.coordinator.render(markdown, pageID: pageID, context: self.context)
         context.coordinator.scroll(to: tocRequest)
+        context.coordinator.find(findRequest)
     }
 
     static func dismantleNSView(_ webView: WKWebView, coordinator: Coordinator) {
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "copy")
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "task")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "find")
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
@@ -92,6 +101,9 @@ struct MarkdownWebView: NSViewRepresentable {
         var onWikiLink: (String) -> Void = { _ in }
         var onTag: (String) -> Void = { _ in }
         var onToggleTask: (Int) -> Void = { _ in }
+        var onFindResult: (Int, Int) -> Void = { _, _ in }
+        private var pendingFind: FindRequest?
+        private var lastFindID: UUID?
         private var isLoaded = false
         private var pending: (markdown: String, pageID: URL?, context: RenderContext)?
         private var lastMarkdown: String?
@@ -120,6 +132,12 @@ struct MarkdownWebView: NSViewRepresentable {
             flush()
         }
 
+        func find(_ request: FindRequest?) {
+            guard let request, request.id != lastFindID else { return }
+            pendingFind = request
+            flush()
+        }
+
         /// Envoie le Markdown à la page dès qu'elle est prête (et seulement s'il a changé).
         private func flush() {
             guard isLoaded, let webView else { return }
@@ -140,6 +158,24 @@ struct MarkdownWebView: NSViewRepresentable {
                 pendingTOC = nil
                 lastTOCID = request.id
                 webView.evaluateJavaScript("window.scrollToHeading(\(request.index), \(title));")
+            }
+
+            // Après le rendu : la recherche s'applique toujours à la page affichée.
+            if let request = pendingFind {
+                pendingFind = nil
+                lastFindID = request.id
+                switch request.kind {
+                case .search:
+                    if let query = json(request.query) {
+                        webView.evaluateJavaScript("window.findInPage(\(query), \(request.line ?? -1), \(request.isAutomatic));")
+                    }
+                case .next:
+                    webView.evaluateJavaScript("window.findStep(1);")
+                case .previous:
+                    webView.evaluateJavaScript("window.findStep(-1);")
+                case .clear:
+                    webView.evaluateJavaScript("window.clearFind();")
+                }
             }
         }
 
@@ -203,6 +239,12 @@ struct MarkdownWebView: NSViewRepresentable {
             guard message.frameInfo.isMainFrame else { return }
             if message.name == "task", let index = message.body as? Int, (0..<100_000).contains(index) {
                 onToggleTask(index)
+                return
+            }
+            if message.name == "find", let body = message.body as? [String: Any],
+               let count = body["count"] as? Int, let index = body["index"] as? Int,
+               (0...1_000_000).contains(count), (0...count).contains(index) {
+                onFindResult(count, index)
                 return
             }
             guard message.name == "copy", let text = message.body as? String, text.utf16.count <= 5_000_000 else { return }

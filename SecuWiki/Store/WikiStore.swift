@@ -68,6 +68,16 @@ final class WikiStore {
     /// Mode concentration : seule la page reste à l'écran.
     var isFocusMode = false
     var tocRequest: TOCRequest?
+    /// Recherche dans la page (Cmd+F) : barre affichée, texte cherché, résultats (voir WikiStore+Find).
+    var isFindPresented = false
+    var findQuery = ""
+    var findRequest: FindRequest?
+    var findCount = 0
+    var findIndex = 0
+    /// Augmente à chaque Cmd+F : la barre reprend le clavier même si elle est déjà affichée.
+    var findFocusToken = 0
+    var editorJump: EditorJump?
+    @ObservationIgnored var pendingJump: PendingJump?
     /// Page affichée dans le panneau de droite après un clic sur [[…]].
     var peekURL: URL?
     /// Réglages du wiki (fichier .secuwiki.json à la racine).
@@ -350,12 +360,14 @@ final class WikiStore {
         if let target, target.standardizedFileURL.path == openURL?.standardizedFileURL.path { return }
         save()
         tocRequest = nil
+        resetFind()
         if let target, target.standardizedFileURL.path == peekURL?.standardizedFileURL.path {
             peekURL = nil // la page liée devient la page principale
         }
         if let target {
             readFile(target)
             if let node = selectedNode { recordRecent(node.url) }
+            applyPendingJump(for: target) // résultat de Cmd+K : on arrive sur le texte cherché
         } else {
             closeFile()
         }

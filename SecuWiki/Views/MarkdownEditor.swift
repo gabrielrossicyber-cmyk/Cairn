@@ -11,6 +11,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var pageProvider: () -> [WikiLinkTarget] = { [] }
     /// Clic dans le sommaire : le curseur va sur le titre.
     var tocRequest: TOCRequest?
+    /// Résultat de Cmd+K : passage à sélectionner.
+    var jump: EditorJump?
     /// Taille de la police (Réglages > Éditeur).
     var fontSize: Double = Prefs.Defaults.editorFontSize
     /// Commandes « / » supplémentaires (modèles personnels).
@@ -101,6 +103,18 @@ struct MarkdownEditor: NSViewRepresentable {
             textView.scrollRangeToVisible(NSRange(location: location, length: 0))
             textView.window?.makeFirstResponder(textView)
         }
+
+        // Résultat de recherche : sélectionne le texte trouvé, l'amène à l'écran et le fait « clignoter ».
+        if let jump, jump.id != context.coordinator.lastJumpID {
+            context.coordinator.lastJumpID = jump.id
+            let length = (textView.string as NSString).length
+            if jump.range.location != NSNotFound, NSMaxRange(jump.range) <= length {
+                textView.setSelectedRange(jump.range)
+                textView.scrollRangeToVisible(jump.range)
+                textView.showFindIndicator(for: jump.range)
+                if jump.takesFocus { textView.window?.makeFirstResponder(textView) }
+            }
+        }
     }
 
     private func configure(_ textView: NSTextView) {
@@ -131,6 +145,7 @@ struct MarkdownEditor: NSViewRepresentable {
         var text: Binding<String>
         var documentID: URL?
         var lastTOCID: UUID?
+        var lastJumpID: UUID?
         var fontSize: Double = 0
         weak var textView: NSTextView?
         var scrollSync: ScrollSync?

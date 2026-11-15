@@ -30,6 +30,12 @@ Raccourcis par défaut ci-dessous. Tous se changent dans **Réglages › Raccour
 | Clic droit | Renommer, déplacer, monter/descendre, corbeille, afficher dans le Finder |
 | Glisser-déposer | Déplacer une page ou un dossier dans un autre dossier |
 
+## Recherche dans la page
+
+- **Cmd+F** : barre de recherche dans la page. En Lecture et en Côte à côte, les résultats sont surlignés dans l'aperçu (sans tenir compte des accents ni des majuscules) ; en Édition, c'est la barre de recherche native de l'éditeur. **Cmd+G** / **Maj+Cmd+G** : résultat suivant / précédent.
+- **Cmd+K** : ouvrir un résultat amène à la ligne de l'extrait affiché, texte surligné (et sélectionné dans l'éditeur). Avec un filtre par tag seul, on arrive sur le `#tag` dans le texte s'il y est.
+- L'expression entière est cherchée d'abord ; si elle n'apparaît pas, chacun de ses mots.
+
 ## Tests automatisés
 
 ```bash

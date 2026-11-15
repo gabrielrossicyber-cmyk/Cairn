@@ -38,6 +38,9 @@ struct PageView: View {
             } else if store.isOpenPageLocked {
                 LockedPageView(title: breadcrumb.last ?? node.name)
             } else {
+                if store.isFindPresented && store.editorMode != .edit {
+                    FindBar()
+                }
                 if let peek = store.peekURL {
                     HSplitView {
                         content(page).frame(minWidth: 220, maxWidth: .infinity)
@@ -79,6 +82,7 @@ struct PageView: View {
             documentID: store.openURL,
             pageProvider: { store.wikiLinkTargets },
             tocRequest: store.tocRequest,
+            jump: store.editorJump,
             fontSize: editorFontSize,
             extraCommands: { store.customTemplates },
             scrollSync: scrollSync
@@ -94,6 +98,8 @@ struct PageView: View {
             pageID: store.openURL,
             context: context,
             tocRequest: store.tocRequest,
+            findRequest: store.findRequest,
+            onFindResult: { count, index in store.findResult(count: count, index: index) },
             onWikiLink: { store.openWikiLink($0) },
             onTag: { store.openSearch(tag: $0) },
             onToggleTask: { store.toggleTask(at: $0) },
@@ -105,6 +111,54 @@ struct PageView: View {
     private func updateScrollSync(_ page: MarkdownPage) {
         scrollSync.isEnabled = store.editorMode == .split
         scrollSync.headerLines = MarkdownPage.headerLineCount(store.rawText, body: page.body)
+    }
+}
+
+/// Barre de recherche dans la page (Cmd+F) : résultats surlignés dans l'aperçu.
+/// ↩ ou Cmd+G : résultat suivant ; Maj+↩ ou Maj+Cmd+G : précédent ; Échap : fermer.
+private struct FindBar: View {
+    @Environment(WikiStore.self) private var store
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        @Bindable var store = store
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Rechercher dans la page", text: $store.findQuery)
+                .textFieldStyle(.plain)
+                .focused($isFocused)
+                .onSubmit { store.findStep(forward: !NSEvent.modifierFlags.contains(.shift)) }
+                .onKeyPress(.escape) {
+                    store.closeFind()
+                    return .handled
+                }
+            Text(status)
+                .font(.callout)
+                .monospacedDigit()
+                .foregroundStyle(store.findCount == 0 && !store.findQuery.isEmpty ? Color.orange : Color.secondary)
+            Button { store.findStep(forward: false) } label: { Image(systemName: "chevron.up") }
+                .help("Résultat précédent (Maj+Cmd+G)")
+                .disabled(store.findCount < 2)
+            Button { store.findStep(forward: true) } label: { Image(systemName: "chevron.down") }
+                .help("Résultat suivant (Cmd+G)")
+                .disabled(store.findCount < 2)
+            Button("Terminé") { store.closeFind() }
+        }
+        .buttonStyle(.borderless)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(Color.primary.opacity(0.045))
+        .onAppear { DispatchQueue.main.async { isFocused = true } }
+        .onChange(of: store.findFocusToken) { isFocused = true }
+        .onChange(of: store.findQuery) { store.runFind() }
+        .onExitCommand { store.closeFind() }
+    }
+
+    private var status: String {
+        if store.findQuery.trimmingCharacters(in: .whitespaces).isEmpty { return "" }
+        if store.findCount == 0 { return "Aucun résultat" }
+        return "\(store.findIndex) sur \(store.findCount)"
     }
 }
 

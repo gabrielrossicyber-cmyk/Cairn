@@ -89,6 +89,20 @@ struct SecuWikiApp: App {
                 Text("Astuce : tape / dans l'éditeur pour toutes les commandes")
             }
             // Menu Page
+            // Édition › Rechercher dans la page (raccourcis standard de macOS, non modifiables).
+            CommandGroup(after: .pasteboard) {
+                Divider()
+                Button("Rechercher dans la page…") { store.findInPage() }
+                    .keyboardShortcut("f")
+                    .disabled(!store.canFindInPage)
+                Button("Résultat suivant") { store.findStep(forward: true) }
+                    .keyboardShortcut("g")
+                    .disabled(!store.canFindInPage)
+                Button("Résultat précédent") { store.findStep(forward: false) }
+                    .keyboardShortcut("g", modifiers: [.command, .shift])
+                    .disabled(!store.canFindInPage)
+            }
+
             CommandMenu("Page") {
                 Button("Rechercher dans le wiki…") { store.toggleSearch() }
                     .keyboardShortcut(key(.search))

@@ -36,7 +36,7 @@ Un wiki est un simple dossier de fichiers `.md` : lisible sans Cairn, synchronis
 
 **Cmd+1** Lecture · **Cmd+2** Édition · **Cmd+3** Côte à côte (l'aperçu suit le défilement) · **Cmd+Maj+F** Mode concentration · **Cmd+Maj+O** Sommaire de la page.
 
-L'enregistrement est automatique (Cmd+S pour forcer). Cmd+F cherche dans la page en mode édition.
+L'enregistrement est automatique (Cmd+S pour forcer).
 
 ### Mise en forme
 
@@ -158,7 +158,8 @@ Bouton « Personnaliser » : chiffres clés, compte à rebours (date d'examen), 
 
 ## 9. Retrouver
 
-- **Cmd+K** : recherche dans tout le wiki, sans tenir compte des accents ni des majuscules.
+- **Cmd+K** : recherche dans tout le wiki, sans tenir compte des accents ni des majuscules. Ouvrir un résultat t'amène à l'endroit du texte, surligné.
+- **Cmd+F** : recherche dans la page ouverte. **Cmd+G** passe au résultat suivant, **Maj+Cmd+G** au précédent, Échap ferme.
 - Filtres **Dossier** et **Tag** sous le champ, ou `#tag` directement dans la recherche.
 - Mode **Code** : cherche seulement dans les blocs de code (pratique pour retrouver une commande).
 - **Texte des images** : tes captures d'écran sont lues sur ton Mac (OCR) ; leurs résultats sont marqués 🖼.
@@ -227,6 +228,7 @@ Ce sont les raccourcis par défaut : **Réglages › Raccourcis** permet de les 
 | Cmd+S / Cmd+R | Enregistrer / relire le dossier |
 | Cmd+B / Cmd+I / Cmd+Maj+C | Gras / italique / code |
 | Cmd+Option+T / Cmd+Option+C | Insérer un tableau / une commande bash |
-| Cmd+F | Rechercher dans la page (édition) |
+| Cmd+F | Rechercher dans la page |
+| Cmd+G / Maj+Cmd+G | Résultat suivant / précédent |
 | ⌃⌥N | Capture rapide, depuis n'importe quelle app |
 | Cmd+, | Réglages |

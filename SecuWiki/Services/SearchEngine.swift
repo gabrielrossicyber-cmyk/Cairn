@@ -10,6 +10,8 @@ struct SearchEntry: Identifiable {
     let lines: [String]
     /// Pour chaque ligne : est-elle dans un bloc de code ?
     let isCode: [Bool]
+    /// Pour chaque ligne : son numéro dans le corps de la page (0 = première ligne), -1 pour le texte lu dans une image.
+    let lineNumbers: [Int]
     /// Noms sous lesquels on peut lier cette page avec [[…]] (titre et nom de fichier, normalisés).
     let keys: [String]
     /// Pages vers lesquelles cette page fait un lien [[…]] (noms normalisés).
@@ -31,6 +33,12 @@ struct SearchEntry: Identifiable {
 
     var id: URL { url }
 
+    /// Numéro de ligne (dans le corps de la page) de la n-ième ligne indexée ; nil pour le texte d'une image.
+    func bodyLine(at index: Int) -> Int? {
+        guard lineNumbers.indices.contains(index), lineNumbers[index] >= 0 else { return nil }
+        return lineNumbers[index]
+    }
+
     private static let linkPattern = try! NSRegularExpression( // swiftlint:disable:this force_try
         pattern: "\\[\\[([^\\]|\\n]+)(?:\\|[^\\]\\n]+)?\\]\\]"
     )
@@ -39,9 +47,10 @@ struct SearchEntry: Identifiable {
          imagePaths: [String] = [], imageLines: [String] = []) {
         var lines: [String] = []
         var isCode: [Bool] = []
+        var lineNumbers: [Int] = []
         var links: [String] = []
         var inFence = false
-        for raw in body.components(separatedBy: "\n") {
+        for (number, raw) in body.components(separatedBy: "\n").enumerated() {
             let trimmed = raw.trimmingCharacters(in: .whitespaces)
             if trimmed.hasPrefix("```") {
                 inFence.toggle()
@@ -50,6 +59,7 @@ struct SearchEntry: Identifiable {
             guard !trimmed.isEmpty else { continue }
             lines.append(trimmed)
             isCode.append(inFence)
+            lineNumbers.append(number)
             if !inFence, trimmed.contains("[[") {
                 let ns = trimmed as NSString
                 for match in Self.linkPattern.matches(in: trimmed, range: NSRange(location: 0, length: ns.length)) {
@@ -63,6 +73,7 @@ struct SearchEntry: Identifiable {
         for line in imageLines {
             lines.append("🖼 " + line)
             isCode.append(false)
+            lineNumbers.append(-1)
         }
 
         self.url = url
@@ -71,6 +82,7 @@ struct SearchEntry: Identifiable {
         self.imagePaths = imagePaths
         self.lines = lines
         self.isCode = isCode
+        self.lineNumbers = lineNumbers
         self.links = links
         let titleKey = SearchEngine.normalize(title).trimmingCharacters(in: .whitespaces)
         let fileKey = SearchEngine.normalize(fileName).trimmingCharacters(in: .whitespaces)
@@ -92,6 +104,8 @@ struct SearchResult: Identifiable {
     let snippet: String?
     let snippetIsCode: Bool
     let score: Int
+    /// Ligne de l'extrait dans le corps de la page : c'est là qu'on arrive en ouvrant le résultat.
+    var line: Int?
     var id: URL { entry.url }
 }
 
@@ -206,7 +220,7 @@ enum SearchEngine {
                 guard let first = matching.first else { continue }
                 let titleBonus = terms.contains { entry.normalizedTitle.contains($0) } ? 5 : 0
                 results.append(SearchResult(entry: entry, snippet: entry.lines[first], snippetIsCode: true,
-                                            score: matching.count + titleBonus))
+                                            score: matching.count + titleBonus, line: entry.bodyLine(at: first)))
             } else {
                 guard terms.allSatisfy({ entry.normalizedAll.contains($0) }) else { continue }
 
@@ -233,7 +247,8 @@ enum SearchEngine {
                     entry: entry,
                     snippet: best.map { entry.lines[$0] },
                     snippetIsCode: best.map { entry.isCode[$0] } ?? false,
-                    score: score
+                    score: score,
+                    line: best.flatMap { entry.bodyLine(at: $0) }
                 ))
             }
         }

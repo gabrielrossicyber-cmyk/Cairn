@@ -742,7 +742,197 @@
       content.classList.add('page-enter');
     }
     updateProgress();
+    if (resetScroll === true) findState = null; // autre page : la recherche précédente ne s'applique plus
+    else if (findState) applyFind(false);       // même page (frappe) : on resurligne, sans bouger l'écran
     return renderMermaid(content, context.autoVertical !== false, resetScroll === true);
+  };
+
+  // ---------- Recherche dans la page (Cmd+F, résultat de Cmd+K) ----------
+
+  // { query, index } de la recherche en cours ; les résultats sont des <mark class="find-hit">.
+  let findState = null;
+  let findMarks = [];
+
+  // Texte sans accents ni majuscules, avec pour chaque caractère sa position dans le texte d'origine.
+  function foldWithMap(text) {
+    let folded = '';
+    const map = [];
+    for (let i = 0; i < text.length; i++) {
+      const piece = text[i].normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      for (let k = 0; k < piece.length; k++) {
+        folded += piece[k];
+        map.push(i);
+      }
+    }
+    map.push(text.length);
+    return { folded: folded, map: map };
+  }
+
+  function foldText(text) {
+    return foldWithMap(text).folded.replace(/\s+/g, ' ').trim();
+  }
+
+  function removeFindMarks() {
+    document.querySelectorAll('mark.find-hit').forEach(function (mark) {
+      const parent = mark.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(mark.textContent), mark);
+      parent.normalize();
+    });
+    findMarks = [];
+  }
+
+  // Surligne toutes les occurrences des textes cherchés (déjà sans accents ni majuscules).
+  function markOccurrences(needles) {
+    const content = document.getElementById('content');
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        const parent = node.parentElement;
+        if (!parent || !node.nodeValue) return NodeFilter.FILTER_REJECT;
+        // Ni les schémas (dessins), ni les boutons de l'interface.
+        if (parent.closest('svg, script, style, button, .diagram-error, .code-lang, .callout-title, mark.find-hit')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+    const marks = [];
+    nodes.forEach(function (node) {
+      const text = foldWithMap(node.nodeValue);
+      const hits = [];
+      let from = 0;
+      while (from < text.folded.length) {
+        let best = -1;
+        let bestLength = 0;
+        needles.forEach(function (needle) {
+          const at = text.folded.indexOf(needle, from);
+          if (at !== -1 && (best === -1 || at < best || (at === best && needle.length > bestLength))) {
+            best = at;
+            bestLength = needle.length;
+          }
+        });
+        if (best === -1) break;
+        hits.push([text.map[best], text.map[best + bestLength]]);
+        from = best + bestLength;
+      }
+      // De la fin vers le début : entourer un passage ne décale pas les positions qui le précèdent.
+      const created = [];
+      for (let i = hits.length - 1; i >= 0; i--) {
+        if (hits[i][1] <= hits[i][0]) continue;
+        const range = document.createRange();
+        range.setStart(node, hits[i][0]);
+        range.setEnd(node, hits[i][1]);
+        const mark = document.createElement('mark');
+        mark.className = 'find-hit';
+        try { range.surroundContents(mark); created.unshift(mark); } catch (e) { /* passage non entourable : ignoré */ }
+      }
+      created.forEach(function (mark) { marks.push(mark); });
+    });
+    return marks;
+  }
+
+  function reportFind() {
+    if (!window.webkit || !window.webkit.messageHandlers || !window.webkit.messageHandlers.find) return;
+    const count = findMarks.length;
+    window.webkit.messageHandlers.find.postMessage({ count: count, index: count && findState ? findState.index + 1 : 0 });
+  }
+
+  // Met en avant le résultat courant ; l'amène au milieu de l'écran si demandé.
+  function showCurrentHit(scroll, smooth) {
+    findMarks.forEach(function (mark) { mark.classList.remove('current'); });
+    if (!findState || !findMarks.length) return;
+    const mark = findMarks[findState.index];
+    mark.classList.add('current');
+    if (!scroll) return;
+    // Résultat dans une réponse masquée ou un bloc replié : on l'ouvre pour pouvoir le montrer.
+    let folded = mark.closest('.answer-body');
+    if (folded && folded.parentElement && !folded.parentElement.classList.contains('open')) {
+      const title = folded.parentElement.querySelector('.callout-title');
+      if (title) title.click();
+    }
+    let details = mark.closest('details:not([open])');
+    while (details) {
+      details.open = true;
+      details = details.parentElement ? details.parentElement.closest('details:not([open])') : null;
+    }
+    mark.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+  }
+
+  // (Re)surligne les résultats de la recherche en cours. L'expression entière d'abord ;
+  // si elle n'apparaît nulle part, chacun de ses mots (comme la recherche Cmd+K).
+  function applyFind(keepIndex) {
+    removeFindMarks();
+    if (!findState) return;
+    const phrase = foldText(findState.query);
+    if (!phrase) return;
+    findMarks = markOccurrences([phrase]);
+    if (!findMarks.length && phrase.indexOf(' ') !== -1) {
+      const words = phrase.split(' ').filter(function (word) { return word.length >= 2; });
+      if (words.length) findMarks = markOccurrences(words);
+    }
+    if (keepIndex === false) {
+      findState.index = Math.min(findState.index, Math.max(findMarks.length - 1, 0));
+      showCurrentHit(false, false);
+      reportFind();
+    }
+  }
+
+  // Bloc de la page qui contient la ligne `line` du texte (le plus précis possible).
+  function blockAtLine(line) {
+    let best = null;
+    let bestLine = -1;
+    document.querySelectorAll('#content [data-line]').forEach(function (el) {
+      const at = Number(el.getAttribute('data-line'));
+      if (at <= line && at >= bestLine) {
+        best = el;
+        bestLine = at;
+      }
+    });
+    return best;
+  }
+
+  let findSettle = null;
+
+  // Cherche `query`. `line` >= 0 : commence par le résultat de cette ligne (ouverture depuis Cmd+K) ;
+  // sinon par le premier résultat visible à l'écran ou après.
+  window.findInPage = function (query, line, automatic) {
+    findState = { query: String(query || ''), index: 0 };
+    applyFind(true);
+    clearTimeout(findSettle);
+    if (findMarks.length) {
+      let index = -1;
+      if (typeof line === 'number' && line >= 0) {
+        const block = blockAtLine(line);
+        if (block) index = findMarks.findIndex(function (mark) { return block.contains(mark); });
+      } else {
+        index = findMarks.findIndex(function (mark) { return mark.getBoundingClientRect().bottom >= 0; });
+      }
+      findState.index = index === -1 ? 0 : index;
+      showCurrentHit(true, false);
+      if (automatic === true) {
+        // Les schémas et les images changent la hauteur de la page après coup : on se recale une fois.
+        const target = findMarks[findState.index];
+        findSettle = setTimeout(function () {
+          if (target.isConnected) target.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }, 450);
+      }
+    }
+    reportFind();
+  };
+
+  window.findStep = function (delta) {
+    if (!findState || !findMarks.length) return reportFind();
+    clearTimeout(findSettle);
+    findState.index = (findState.index + delta + findMarks.length) % findMarks.length;
+    showCurrentHit(true, true);
+    reportFind();
+  };
+
+  window.clearFind = function () {
+    clearTimeout(findSettle);
+    findState = null;
+    removeFindMarks();
   };
 
   // Barre de lecture : fine ligne en haut qui montre où on en est dans la page.

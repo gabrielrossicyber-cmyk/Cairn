@@ -159,6 +159,50 @@ struct MarkdownPage {
         max(text.components(separatedBy: "\n").count - body.components(separatedBy: "\n").count, 0)
     }
 
+    // MARK: Recherche dans la page
+
+    /// Où se trouve `query` dans le texte du fichier, pour y placer l'éditeur.
+    /// Cherche d'abord dans la ligne `line` du corps (résultat de Cmd+K), sinon dans tout le corps.
+    /// L'expression entière d'abord, puis chacun de ses mots ; sans tenir compte des accents ni des majuscules.
+    static func matchRange(of query: String, nearBodyLine line: Int?, in text: String) -> NSRange? {
+        let phrase = query.trimmingCharacters(in: .whitespaces)
+        let words = phrase.split(separator: " ").map(String.init)
+        guard !phrase.isEmpty else { return nil }
+        let candidates = words.count > 1 ? [phrase] + words : [phrase]
+
+        let ns = text as NSString
+        let options: NSString.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+        func firstMatch(in range: NSRange) -> NSRange? {
+            guard range.length > 0 else { return nil }
+            for candidate in candidates {
+                let found = ns.range(of: candidate, options: options, range: range)
+                if found.location != NSNotFound { return found }
+            }
+            return nil
+        }
+
+        // Début du corps et, si elle est connue, la ligne visée.
+        let headerLines = headerLineCount(text, body: parse(text).body)
+        var bodyStart = 0
+        var target: NSRange?
+        var location = 0
+        var index = 0
+        while location < ns.length {
+            let lineRange = ns.lineRange(for: NSRange(location: location, length: 0))
+            if index == headerLines { bodyStart = lineRange.location }
+            if let line, index == headerLines + line {
+                target = lineRange
+                break
+            }
+            if line == nil, index >= headerLines { break }
+            location = NSMaxRange(lineRange)
+            index += 1
+        }
+
+        if let target, let found = firstMatch(in: target) { return found }
+        return firstMatch(in: NSRange(location: bodyStart, length: ns.length - bodyStart))
+    }
+
     // MARK: Cases à cocher
 
     private static let taskPattern = try! NSRegularExpression( // swiftlint:disable:this force_try

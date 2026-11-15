@@ -112,6 +112,11 @@ a.tag:hover { text-decoration: none; background: color-mix(in srgb, var(--brand)
   background: rgba(255, 159, 10, 0.14);
   border: 1px solid rgba(255, 159, 10, 0.35);
 }
+/* Recherche dans la page : tous les résultats en jaune, le résultat courant en orange. */
+mark.find-hit { background: rgba(255, 214, 10, 0.5); color: inherit; border-radius: 3px; padding: 0; }
+mark.find-hit.current { background: #ff9f0a; color: #1d1d1f; box-shadow: 0 0 0 2px #ff9f0a; }
+@media print { mark.find-hit, mark.find-hit.current { background: none; color: inherit; box-shadow: none; } }
+
 .remote-image {
   display: inline-block;
   margin: 4px 0;

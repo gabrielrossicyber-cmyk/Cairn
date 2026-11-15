@@ -212,7 +212,22 @@ struct SearchPalette: View {
 
     private func open(_ results: [SearchResult]) {
         guard results.indices.contains(selected) else { return }
-        store.openPage(results[selected].entry.url)
+        let result = results[selected]
+        let parsed = parsedQuery
+        // On arrive sur le texte cherché ; sans texte, sur le tag qui a servi de filtre.
+        var target = parsed.text
+        if target.isEmpty {
+            if let typed = parsed.tags.first {
+                target = "#" + typed
+            } else if let tag = store.searchTagFilter {
+                target = "#" + store.tagName(tag)
+            }
+        }
+        if target.isEmpty {
+            store.openPage(result.entry.url)
+        } else {
+            store.openPage(result.entry.url, jumpingTo: target, line: result.line)
+        }
         close()
     }
 
