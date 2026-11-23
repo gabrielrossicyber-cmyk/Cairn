@@ -42,8 +42,8 @@ extension WikiStore {
 
     func linkMap(for url: URL) -> LinkMap? {
         let path = url.standardizedFileURL.path
-        guard let center = searchIndex.first(where: { $0.url.standardizedFileURL.path == path }) else { return nil }
-        let entriesByPath = Dictionary(searchIndex.map { ($0.url.standardizedFileURL.path, $0) }, uniquingKeysWith: { a, _ in a })
+        guard let center = searchIndex.first(where: { $0.filePath == path }) else { return nil }
+        let entriesByPath = Dictionary(searchIndex.map { ($0.filePath, $0) }, uniquingKeysWith: { a, _ in a })
 
         let incoming = backlinks(for: url)
 
@@ -61,7 +61,7 @@ extension WikiStore {
                 if let target = pageLookup[key] {
                     let targetPath = target.standardizedFileURL.path
                     guard targetPath != path, let entry = entriesByPath[targetPath] else { continue }
-                    if outgoing.contains(where: { $0.entry?.url.standardizedFileURL.path == targetPath }) { continue }
+                    if outgoing.contains(where: { $0.entry?.filePath == targetPath }) { continue }
                     outgoing.append(LinkMap.Target(id: key, name: raw, entry: entry))
                 } else {
                     outgoing.append(LinkMap.Target(id: key, name: raw, entry: nil))
@@ -70,12 +70,12 @@ extension WikiStore {
         }
 
         // Mêmes tags : les pages déjà reliées par un lien ne sont pas répétées.
-        let linked = Set(incoming.map { $0.url.standardizedFileURL.path }
-            + outgoing.compactMap { $0.entry?.url.standardizedFileURL.path } + [path])
+        let linked = Set(incoming.map(\.filePath)
+            + outgoing.compactMap { $0.entry?.filePath } + [path])
         var groups: [LinkMap.TagGroup] = []
         for (name, key) in zip(center.tags, center.tagKeys).prefix(4) {
             let pages = searchIndex
-                .filter { $0.tagKeys.contains(key) && !linked.contains($0.url.standardizedFileURL.path) }
+                .filter { $0.tagKeys.contains(key) && !linked.contains($0.filePath) }
                 .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
             if !pages.isEmpty {
                 groups.append(LinkMap.TagGroup(key: key, name: name, pages: Array(pages.prefix(8)),

@@ -38,6 +38,8 @@ struct MarkdownPage {
     ///   (seule la virgule sépare deux tags : un tag de l'en-tête peut contenir des espaces) ;
     /// - texte : `#iso27001`, hors blocs de code et code en ligne.
     static func tags(in text: String) -> [String] {
+        // Ni « # » ni en-tête « tags: » : aucune expression régulière à lancer.
+        guard text.utf8.contains(35) || text.contains("tags") else { return [] }
         var found: [String] = []
         var keys = Set<String>()
         func add(_ raw: Substring) {
@@ -83,7 +85,8 @@ struct MarkdownPage {
     }
 
     static func parse(_ text: String) -> MarkdownPage {
-        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+        // Fins de ligne Windows : converties seulement s'il y en a (sinon pas de copie du texte).
+        let normalized = text.utf8.contains(13) ? text.replacingOccurrences(of: "\r\n", with: "\n") : text
 
         // Pas d'en-tête : toute la page est du Markdown.
         guard normalized.hasPrefix("---\n") else {
@@ -156,7 +159,14 @@ struct MarkdownPage {
 
     /// Nombre de lignes de l'en-tête (pour faire correspondre une ligne de l'éditeur à l'aperçu).
     static func headerLineCount(_ text: String, body: String) -> Int {
-        max(text.components(separatedBy: "\n").count - body.components(separatedBy: "\n").count, 0)
+        // Compte les fins de ligne octet par octet : ni tableau de lignes, ni copie (appelé à chaque frappe).
+        max(newlineCount(text) - newlineCount(body), 0)
+    }
+
+    private static func newlineCount(_ text: String) -> Int {
+        var count = 0
+        for byte in text.utf8 where byte == 10 { count += 1 }
+        return count
     }
 
     // MARK: Recherche dans la page
@@ -272,6 +282,7 @@ struct MarkdownPage {
 
     /// Noms des variables utilisées dans le texte, dans l'ordre d'apparition.
     static func usedVariableNames(in body: String) -> [String] {
+        guard body.contains("{{") else { return [] }
         let ns = body as NSString
         var names: [String] = []
         for match in variablePattern.matches(in: body, range: NSRange(location: 0, length: ns.length)) {
@@ -283,8 +294,8 @@ struct MarkdownPage {
 
     /// Remplace {{NOM}} par sa valeur (les variables sans valeur restent visibles telles quelles).
     static func substitute(_ body: String, variables: [PageVariable]) -> String {
+        guard !variables.isEmpty, body.contains("{{") else { return body }
         let values = Dictionary(variables.map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
-        guard !values.isEmpty else { return body }
         let ns = body as NSString
         let result = NSMutableString(string: body)
         for match in variablePattern.matches(in: body, range: NSRange(location: 0, length: ns.length)).reversed() {

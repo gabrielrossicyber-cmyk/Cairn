@@ -159,6 +159,31 @@ struct SecuWikiApp: App {
                     .disabled(store.rootURL == nil)
             }
 
+            // Menu Aller : tout faire au clavier.
+            CommandMenu("Aller") {
+                Button("Retour") { store.goBack() }
+                    .keyboardShortcut(key(.goBack))
+                    .disabled(!store.canGoBack)
+                Button("Avancer") { store.goForward() }
+                    .keyboardShortcut(key(.goForward))
+                    .disabled(!store.canGoForward)
+                Divider()
+                Button("Page au-dessus") { store.goToAdjacentPage(forward: false) }
+                    .keyboardShortcut(key(.previousPage))
+                    .disabled(!store.canGoToAdjacentPage)
+                Button("Page en dessous") { store.goToAdjacentPage(forward: true) }
+                    .keyboardShortcut(key(.nextPage))
+                    .disabled(!store.canGoToAdjacentPage)
+                Divider()
+                Button("Zone suivante") { KeyboardNavigator.shared.cycle(forward: true) }
+                    .keyboardShortcut(.tab, modifiers: [.control])
+                Button("Zone précédente") { KeyboardNavigator.shared.cycle(forward: false) }
+                    .keyboardShortcut(.tab, modifiers: [.control, .shift])
+                Button("Arborescence") { KeyboardNavigator.shared.focusSidebar() }
+                Button("Page") { KeyboardNavigator.shared.focusPage() }
+                    .disabled(store.openURL == nil)
+            }
+
             // Menu Aide : la page guide du wiki (recréée si elle a été supprimée).
             CommandGroup(replacing: .help) {
                 Button("Guide de Cairn") { store.openGuide() }

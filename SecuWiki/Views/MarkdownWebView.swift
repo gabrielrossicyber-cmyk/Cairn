@@ -108,6 +108,8 @@ struct MarkdownWebView: NSViewRepresentable {
         private var pending: (markdown: String, pageID: URL?, context: RenderContext)?
         private var lastMarkdown: String?
         private var lastContext: RenderContext?
+        /// Réglages déjà convertis en JavaScript : la liste des pages n'est pas réencodée à chaque frappe.
+        private var lastContextJSON: String?
         private var lastPageID: URL?
         private var pendingTOC: TOCRequest?
         private var lastTOCID: UUID?
@@ -145,8 +147,10 @@ struct MarkdownWebView: NSViewRepresentable {
             if let next = pending {
                 pending = nil
                 let resetScroll = next.pageID != lastPageID
+                let contextJSON = next.context == lastContext ? lastContextJSON : json(next.context)
                 if resetScroll || next.markdown != lastMarkdown || next.context != lastContext,
-                   let source = json(next.markdown), let context = json(next.context) {
+                   let source = json(next.markdown), let context = contextJSON {
+                    lastContextJSON = context
                     lastMarkdown = next.markdown
                     lastContext = next.context
                     lastPageID = next.pageID

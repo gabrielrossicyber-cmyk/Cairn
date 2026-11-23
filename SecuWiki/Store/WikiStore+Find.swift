@@ -79,6 +79,7 @@ extension WikiStore {
         findCount = 0
         findIndex = 0
         findRequest = FindRequest(kind: .clear)
+        KeyboardNavigator.shared.focusPage() // le clavier revient à la page (↑↓ font défiler)
     }
 
     /// Changement de page : la recherche de la page précédente ne s'applique plus.

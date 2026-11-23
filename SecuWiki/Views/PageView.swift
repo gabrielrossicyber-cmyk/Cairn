@@ -16,8 +16,9 @@ struct PageView: View {
     }
 
     var body: some View {
-        let page = MarkdownPage.parse(store.rawText)
-        let _ = updateScrollSync(page)
+        let analysis = store.openPageAnalysis
+        let page = analysis.page
+        let _ = updateScrollSync(analysis)
 
         VStack(spacing: 0) {
             // En mode concentration : ni fil d'Ariane, ni barres annexes. Juste la page.
@@ -25,7 +26,7 @@ struct PageView: View {
                 PageHeader(node: node, breadcrumb: breadcrumb)
 
                 if store.loadError == nil && !store.isOpenPageLocked {
-                    VariablesBar(page: page)
+                    VariablesBar(page: page, undeclared: analysis.undeclaredVariables)
                 }
             }
 
@@ -108,9 +109,9 @@ struct PageView: View {
     }
 
     /// Le défilement synchronisé ne sert qu'en mode côte à côte.
-    private func updateScrollSync(_ page: MarkdownPage) {
+    private func updateScrollSync(_ analysis: PageAnalysis) {
         scrollSync.isEnabled = store.editorMode == .split
-        scrollSync.headerLines = MarkdownPage.headerLineCount(store.rawText, body: page.body)
+        scrollSync.headerLines = analysis.headerLines
     }
 }
 
@@ -149,7 +150,8 @@ private struct FindBar: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
         .background(Color.primary.opacity(0.045))
-        .onAppear { DispatchQueue.main.async { isFocused = true } }
+        // Ouverte par Cmd+F : prend le clavier. Ouverte par un résultat de Cmd+K : le laisse à la page.
+        .onAppear { if store.findRequest?.isAutomatic != true { DispatchQueue.main.async { isFocused = true } } }
         .onChange(of: store.findFocusToken) { isFocused = true }
         .onChange(of: store.findQuery) { store.runFind() }
         .onExitCommand { store.closeFind() }
@@ -172,7 +174,7 @@ private struct PageHeader: View {
 
     var body: some View {
         let favorite = store.isFavorite(node)
-        let tags = store.isOpenPageLocked ? [] : MarkdownPage.tags(in: store.rawText)
+        let tags = store.isOpenPageLocked ? [] : store.openPageAnalysis.tags
         HStack(spacing: 10) {
             Text(breadcrumb.joined(separator: "  /  "))
                 .font(.caption)
@@ -267,11 +269,10 @@ private struct SaveStatus: View {
 private struct VariablesBar: View {
     @Environment(WikiStore.self) private var store
     let page: MarkdownPage
+    let undeclared: [String]
 
     var body: some View {
-        let declared = page.variables.map(\.name)
-        let used = MarkdownPage.usedVariableNames(in: page.body).filter { !declared.contains($0) }
-        let names = declared + used
+        let names = page.variables.map(\.name) + undeclared
 
         if !names.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {

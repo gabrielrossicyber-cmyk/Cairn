@@ -164,6 +164,13 @@ Bouton « Personnaliser » : chiffres clés, compte à rebours (date d'examen), 
 - Mode **Code** : cherche seulement dans les blocs de code (pratique pour retrouver une commande).
 - **Texte des images** : tes captures d'écran sont lues sur ton Mac (OCR) ; leurs résultats sont marqués 🖼.
 
+### Tout au clavier
+
+- **Tab** / **Maj+Tab** : passer de l'arborescence à l'éditeur, puis à l'aperçu. Dans l'éditeur, c'est **⌃Tab** (Tab y sert à indenter).
+- Dans l'arborescence : **↑↓** pour changer de page, **→ ←** pour déplier un dossier, **↩** pour entrer dans la page.
+- Dans l'aperçu : **↑↓**, **Espace** pour faire défiler.
+- **⌃⌘←** / **⌃⌘→** : page précédemment ouverte / suivante. **⌃⌘↑** / **⌃⌘↓** : page au-dessus / en dessous dans l'arborescence.
+
 ## 10. Modèles de page
 
 À la création (Cmd+N) ou avec `/` dans une page : `/cours`, `/revision`, `/lab`, `/incident`, `/glossaire`, `/cve`, `/mitre`, `/outil`, `/procedure`.
@@ -231,4 +238,7 @@ Ce sont les raccourcis par défaut : **Réglages › Raccourcis** permet de les 
 | Cmd+F | Rechercher dans la page |
 | Cmd+G / Maj+Cmd+G | Résultat suivant / précédent |
 | ⌃⌥N | Capture rapide, depuis n'importe quelle app |
+| Tab / ⌃Tab | Zone suivante (arborescence, éditeur, aperçu) |
+| ⌃⌘← / ⌃⌘→ | Retour / Avancer |
+| ⌃⌘↑ / ⌃⌘↓ | Page au-dessus / en dessous |
 | Cmd+, | Réglages |

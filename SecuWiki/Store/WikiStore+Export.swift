@@ -13,15 +13,7 @@ extension WikiStore {
 
     /// Sélectionne la page dont le fichier est `url` (page normale ou index.md d'un dossier).
     func openPage(_ url: URL) {
-        let path = url.standardizedFileURL.path
-        func find(_ list: [WikiNode]) -> WikiNode? {
-            for node in list {
-                if node.pageURL?.standardizedFileURL.path == path { return node }
-                if let children = node.children, let found = find(children) { return found }
-            }
-            return nil
-        }
-        guard let node = find(nodes) else { return }
+        guard let node = node(forPage: url) else { return }
         selection = node.id
     }
 
@@ -29,7 +21,7 @@ extension WikiStore {
     func refreshSearchEntry(for url: URL, text: String) {
         guard let rootURL, let entry = SearchEngine.entry(for: url, root: rootURL, text: text) else { return }
         let path = url.standardizedFileURL.path
-        if let index = searchIndex.firstIndex(where: { $0.url.standardizedFileURL.path == path }) {
+        if let index = searchIndex.firstIndex(where: { $0.filePath == path }) {
             searchIndex[index] = entry
             rebuildPageLookup()
         }

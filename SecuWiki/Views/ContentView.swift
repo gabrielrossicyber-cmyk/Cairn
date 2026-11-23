@@ -158,6 +158,9 @@ struct ContentView: View {
             splashGaveUp = true // le wiki continue de se charger, mais l'app reste utilisable
         }
         .modifier(WikiDialogs())
+        .onAppear { KeyboardNavigator.shared.install(store: store) }
+        // Wiki chargé : ↑↓ changent de page tout de suite, sans clic préalable.
+        .onChange(of: showsSplash) { if !showsSplash { KeyboardNavigator.shared.focusSidebar(onlyIfIdle: true) } }
     }
 }
 

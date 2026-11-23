@@ -44,26 +44,15 @@ extension WikiStore {
 
     /// Dossiers du wiki (chemins relatifs), pour les widgets « Contenu d'un dossier » et « À faire ».
     var dashboardFolderOptions: [DashboardFolderOption] {
-        guard let rootURL else { return [] }
-        let rootCount = rootURL.standardizedFileURL.pathComponents.count
-        var options: [DashboardFolderOption] = []
-        func walk(_ list: [WikiNode], depth: Int) {
-            for node in list where node.isFolder {
-                if SearchEngine.isTemplatesFolder(node.url.lastPathComponent) { continue }
-                let path = node.url.standardizedFileURL.pathComponents.dropFirst(rootCount).joined(separator: "/")
-                options.append(DashboardFolderOption(path: path, label: String(repeating: "   ", count: depth) + node.name))
-                walk(node.children ?? [], depth: depth + 1)
-            }
-        }
-        walk(nodes, depth: 0)
-        return options
+        _ = nodes // dépendance observée : le menu se met à jour quand l'arborescence change
+        return folderOptionsCache
     }
 
-    /// Pages dont le fichier est dans ce dossier (ou ses sous-dossiers). Dossier vide = tout le wiki.
+    /// Pages d'un dossier (chemin relatif à la racine du wiki, vide = tout le wiki).
     func entries(inFolder folder: String) -> [SearchEntry] {
         guard !folder.isEmpty, let rootURL else { return searchIndex }
         let prefix = rootURL.appendingPathComponent(folder).standardizedFileURL.path + "/"
-        return searchIndex.filter { $0.url.standardizedFileURL.path.hasPrefix(prefix) }
+        return searchIndex.filter { $0.filePath.hasPrefix(prefix) }
     }
 }
 

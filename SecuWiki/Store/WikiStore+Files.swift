@@ -104,7 +104,7 @@ extension WikiStore {
             save()
             // Noms sous lesquels les autres pages font un lien vers celle-ci (avant renommage).
             let pagePath = node.pageURL?.standardizedFileURL.path
-            let oldKeys = Set(searchIndex.first { $0.url.standardizedFileURL.path == pagePath }?.keys ?? [])
+            let oldKeys = Set(searchIndex.first { $0.filePath == pagePath }?.keys ?? [])
 
             let fm = FileManager.default
             if oldPath.lowercased() == newPath.lowercased() {

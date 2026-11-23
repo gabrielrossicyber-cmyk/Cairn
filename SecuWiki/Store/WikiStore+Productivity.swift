@@ -21,7 +21,7 @@ extension WikiStore {
         }
         pageLookup = lookup
         pageKeys = lookup.keys.sorted()
-        let locked = Set(searchIndex.filter(\.isLocked).map { $0.url.standardizedFileURL.path })
+        let locked = Set(searchIndex.filter(\.isLocked).map(\.filePath))
         if locked != lockedPages { lockedPages = locked }
         rebuildTagIndex()
     }
@@ -92,10 +92,10 @@ extension WikiStore {
     /// Pages qui contiennent un lien [[…]] vers cette page.
     func backlinks(for url: URL?) -> [SearchEntry] {
         guard let path = url?.standardizedFileURL.path,
-              let entry = searchIndex.first(where: { $0.url.standardizedFileURL.path == path }) else { return [] }
+              let entry = searchIndex.first(where: { $0.filePath == path }) else { return [] }
         let keys = Set(entry.keys)
         return searchIndex
-            .filter { $0.url.standardizedFileURL.path != path && !keys.isDisjoint(with: $0.links) }
+            .filter { $0.filePath != path && !keys.isDisjoint(with: $0.links) }
             .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 

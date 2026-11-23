@@ -11,6 +11,8 @@
   }
   initMermaid();
 
+  const highlightCache = new Map(); // code coloré par highlight.js, par langage + texte
+
   // Dernier rendu : permet de redessiner (schémas compris) quand on passe en clair / sombre.
   let lastRender = null;
   if (darkQuery && darkQuery.addEventListener) {
@@ -35,8 +37,15 @@
         return '<pre class="mermaid">' + md.utils.escapeHtml(fluxToMermaid(code)) + '</pre>';
       }
       if (lang && window.hljs && hljs.getLanguage(lang)) {
+        // Coloration déjà calculée pour ce code : pas de nouvelle analyse à chaque frappe.
+        const key = lang + '\u0000' + code;
+        const cached = highlightCache.get(key);
+        if (cached !== undefined) return cached;
         try {
-          return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+          const html = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+          highlightCache.set(key, html);
+          if (highlightCache.size > 400) highlightCache.delete(highlightCache.keys().next().value);
+          return html;
         } catch (e) { /* on retombe sur le rendu par défaut */ }
       }
       return ''; // markdown-it échappe alors le code lui-même
@@ -162,11 +171,16 @@
       first.nodeValue = first.nodeValue.slice(match[0].length);
       const box = document.createElement('input');
       box.type = 'checkbox';
+      box.className = 'task-box';
       box.disabled = !clickable;
       box.checked = match[1] !== ' ';
-      const taskIndex = index++;
+      index++;
       if (clickable) {
-        box.addEventListener('change', function () { handler.postMessage(taskIndex); });
+        // N° de la case calculé au clic : avec le rendu par blocs, les cases au-dessus peuvent avoir changé.
+        box.addEventListener('change', function () {
+          const content = box.closest('#content') || document;
+          handler.postMessage(Array.prototype.indexOf.call(content.querySelectorAll('input.task-box'), box));
+        });
       }
       first.parentNode.insertBefore(box, first);
       li.classList.add('task-item');
@@ -507,21 +521,31 @@
     const blocks = Array.prototype.slice.call(root.querySelectorAll('pre.mermaid'));
     if (!blocks.length || !window.mermaid) return;
 
+    const drawn = [];
     for (let i = 0; i < blocks.length; i++) {
       const pre = blocks[i];
-      const source = pre.textContent;
+      // Schéma gardé tel quel par le rendu par blocs (son texte n'a pas changé) : rien à refaire.
+      if (pre.dataset.rendered === '1') {
+        if (!pre.classList.contains('mermaid-error') && pre.querySelector('svg')) lastGoodDiagrams[i] = pre.innerHTML;
+        continue;
+      }
+      const source = pre.dataset.source || pre.textContent;
       pre.dataset.source = source;
       try {
         if (!svgCache.has(cacheKey(source))) await mermaid.parse(source);
         const svg = await renderSvg(source);
+        if (pre.dataset.rendered === '1') continue; // dessiné entre-temps par un rendu plus récent
         pre.innerHTML = svg;
         lastGoodDiagrams[i] = svg;
       } catch (error) {
+        if (pre.dataset.rendered === '1') continue;
         showDiagramError(pre, source, error, lastGoodDiagrams[i]);
       }
+      pre.dataset.rendered = '1';
+      drawn.push(pre);
     }
     removeMermaidLeftovers();
-    if (autoVertical) await fitLongDiagrams(root);
+    if (autoVertical && drawn.length) await fitLongDiagrams(root, drawn);
   }
 
   // Schémas déjà dessinés (par thème) : en mode côte à côte, taper du texte ne redessine
@@ -660,10 +684,11 @@
 
   // Un schéma horizontal (LR) trop large devient minuscule : on le redessine de haut en bas (TD),
   // chaque étape passe sous la précédente et le texte reste lisible.
-  async function fitLongDiagrams(root) {
+  async function fitLongDiagrams(root, list) {
     const available = root.clientWidth;
     const pattern = /^(\s*(?:flowchart|graph)\s+)(LR|RL)\b/m;
-    for (const pre of Array.prototype.slice.call(root.querySelectorAll('pre.mermaid:not(.mermaid-error)'))) {
+    for (const pre of list) {
+      if (pre.classList.contains('mermaid-error') || !pre.isConnected) continue;
       const svg = pre.querySelector('svg');
       const source = pre.dataset.source || '';
       if (!svg || !available || !pattern.test(source)) continue;
@@ -716,6 +741,120 @@
     if (target.tagName === 'IMG' && !target.closest('a')) openLightbox(target);
   });
 
+  // ---------- Rendu par blocs ----------
+  //
+  // Pendant la frappe, seuls les blocs (paragraphe, liste, tableau, code, schéma…) dont le texte a changé
+  // sont reconstruits. Les autres restent en place, tels quels : schémas déjà dessinés, images et PDF
+  // intégrés (pas de rechargement ni de clignotement), réponses dépliées, images distantes chargées.
+  let liveBlocks = [];      // [{ key, node }] : blocs affichés, dans l'ordre de la page
+  let liveSignature = null; // réglages qui changent le rendu de tous les blocs à la fois
+
+  // Identité d'un bloc : son HTML brut, sans les numéros de ligne (ils changent dès qu'on ajoute une ligne au-dessus).
+  function blockKey(node) {
+    return node.nodeType === 1 ? node.outerHTML.replace(/ data-line="\d+"/g, '') : '#text:' + node.nodeValue;
+  }
+
+  // Numéros de ligne du rendu neuf recopiés sur le bloc gardé (défilement synchronisé, recherche).
+  function copyLineNumbers(from, to) {
+    if (from.nodeType !== 1 || to.nodeType !== 1) return;
+    const line = from.getAttribute('data-line');
+    if (line !== null) to.setAttribute('data-line', line);
+    const source = from.querySelectorAll('[data-line]');
+    const target = to.querySelectorAll('[data-line]');
+    if (source.length !== target.length) return;
+    for (let i = 0; i < source.length; i++) target[i].setAttribute('data-line', source[i].getAttribute('data-line'));
+  }
+
+  // Transformations propres à Cairn (encadrés, cases, liens, secrets, tags, images, boutons Copier).
+  function decorate(root, context) {
+    renderCallouts(root);
+    renderTaskLists(root, context.interactiveTasks === true);
+    renderWikiLinks(root, context.pages, context.base);
+    renderSecrets(root, context.secretNames);
+    renderTags(root);
+    resolveImages(root, context.base);
+    renderRemoteImages(root);
+    addCopyButtons(root);
+  }
+
+  function updateBlocks(content, source, context, newPage) {
+    const signature = JSON.stringify([
+      context.base || '', context.pages || [], context.secretNames || [], context.interactiveTasks === true,
+      context.remoteImages === true, context.autoVertical !== false, context.breaks !== false, isDark()
+    ]);
+    const template = document.createElement('template');
+    template.innerHTML = md.render(source);
+    const fresh = Array.prototype.filter.call(template.content.childNodes, function (node) {
+      return node.nodeType === 1 || (node.nodeType === 3 && node.nodeValue.trim() !== '');
+    });
+
+    // Blocs encore valables, par identité (deux paragraphes identiques : pris dans l'ordre).
+    const reusable = new Map();
+    const full = newPage || signature !== liveSignature || !liveBlocks.length;
+    if (!full) {
+      liveBlocks.forEach(function (block) {
+        if (block.node.parentNode !== content) return;
+        const list = reusable.get(block.key);
+        if (list) list.push(block); else reusable.set(block.key, [block]);
+      });
+    }
+
+    const next = [];
+    const added = [];
+    fresh.forEach(function (node) {
+      const key = blockKey(node);
+      const list = reusable.get(key);
+      const kept = list && list.length ? list.shift() : null;
+      if (kept) {
+        copyLineNumbers(node, kept.node);
+        next.push({ key: key, node: kept.node });
+      } else {
+        next.push({ key: key, node: node, isNew: true });
+        added.push(node);
+      }
+    });
+
+    // Les nouveaux blocs sont transformés à part, avant d'entrer dans la page.
+    if (added.length) {
+      const holder = document.createElement('div');
+      added.forEach(function (node) { holder.appendChild(node); });
+      decorate(holder, context);
+      const decorated = Array.prototype.slice.call(holder.childNodes);
+      if (decorated.length === added.length) {
+        let k = 0;
+        next.forEach(function (entry) { if (entry.isNew) entry.node = decorated[k++]; });
+      } else {
+        // Une transformation a remplacé un bloc entier : on repart d'une page neuve.
+        // (Plus de suivi par blocs pour ce rendu : le prochain repartira de zéro.)
+        liveBlocks = [];
+        liveSignature = null;
+        content.replaceChildren.apply(content, decorated);
+        return;
+      }
+    }
+
+    if (full) {
+      content.replaceChildren.apply(content, next.map(function (entry) { return entry.node; }));
+    } else {
+      // On retire ce qui a disparu, puis on insère les nouveaux blocs à leur place
+      // sans déplacer les blocs gardés (déplacer un PDF intégré le rechargerait).
+      const keep = new Set(next.map(function (entry) { return entry.node; }));
+      Array.prototype.slice.call(content.childNodes).forEach(function (child) {
+        if (!keep.has(child)) content.removeChild(child);
+      });
+      let cursor = content.firstChild;
+      next.forEach(function (entry) {
+        if (entry.node === cursor) {
+          cursor = cursor.nextSibling;
+        } else {
+          content.insertBefore(entry.node, cursor);
+        }
+      });
+    }
+    liveBlocks = next.map(function (entry) { return { key: entry.key, node: entry.node }; });
+    liveSignature = signature;
+  }
+
   // resetScroll = true quand on ouvre une autre page ; false pendant la frappe (on garde la position).
   // context = { base: dossier de la page, pages: noms de pages connus (normalisés) }
   window.renderMarkdown = function (source, resetScroll, context) {
@@ -724,16 +863,8 @@
     applySettings(context);
     const scrollY = window.scrollY;
     const content = document.getElementById('content');
-    content.innerHTML = md.render(source);
+    updateBlocks(content, source, context, resetScroll === true);
     invalidateBlocks();
-    renderCallouts(content);
-    renderTaskLists(content, context.interactiveTasks === true);
-    renderWikiLinks(content, context.pages, context.base);
-    renderSecrets(content, context.secretNames);
-    renderTags(content);
-    resolveImages(content, context.base);
-    renderRemoteImages(content);
-    addCopyButtons(content);
     window.scrollTo(0, resetScroll ? 0 : scrollY);
     if (resetScroll === true) {
       // Changement de page : léger fondu d'apparition.

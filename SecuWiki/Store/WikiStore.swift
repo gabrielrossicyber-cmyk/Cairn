@@ -16,7 +16,22 @@ final class WikiStore {
     var wikis: [WikiReference] = []
     var currentWikiID: UUID?
     /// Arborescence affichée à gauche.
-    var nodes: [WikiNode] = []
+    var nodes: [WikiNode] = [] {
+        didSet { rebuildNodeIndex() }
+    }
+    /// Nœuds par chemin (fichier ou dossier) et par page : `node(at:)` et `openPage` sans parcourir l'arbre.
+    /// Reconstruit à chaque changement de l'arborescence ; `selectedNode` est lu par beaucoup de vues.
+    @ObservationIgnored private(set) var nodesByPath: [String: WikiNode] = [:]
+    @ObservationIgnored private(set) var nodesByPage: [String: WikiNode] = [:]
+    /// Pages dans l'ordre de l'arborescence (page suivante / précédente au clavier).
+    @ObservationIgnored private(set) var pageOrder: [URL] = []
+    /// Choix de dossiers (recherche, tableau de bord), calculés une fois par arborescence.
+    @ObservationIgnored private(set) var folderOptionsCache: [DashboardFolderOption] = []
+    @ObservationIgnored let pageAnalysisCache = PageAnalysisCache()
+    /// Pages ouvertes, pour revenir en arrière / en avant (voir WikiStore+Navigation).
+    var history: [URL] = []
+    var historyIndex = -1
+    @ObservationIgnored var pendingHistoryTarget: URL?
     /// Identifiant (URL) du nœud sélectionné.
     var selection: URL?
 
@@ -127,7 +142,8 @@ final class WikiStore {
     var pendingDelete: WikiNode?
     var errorMessage: String?
 
-    init() {
+    /// `reopensLastWiki: false` : store vide, sans lecture du disque (tests automatisés).
+    init(reopensLastWiki: Bool = true) {
         editorMode = EditorMode(rawValue: Prefs.string(Prefs.defaultMode, Prefs.Defaults.defaultMode)) ?? .preview
         // Enregistre aussi quand on quitte l'app ou qu'on passe à une autre app.
         let center = NotificationCenter.default
@@ -144,6 +160,10 @@ final class WikiStore {
         secretNames = SecretStore.names()
         secretObserver = NotificationCenter.default.addObserver(forName: SecretStore.didChange, object: nil, queue: .main) { [weak self] _ in
             self?.secretNames = SecretStore.names()
+        }
+        guard reopensLastWiki else {
+            isLaunching = false
+            return
         }
         // Rouvre le dernier wiki utilisé.
         wikis = FolderAccess.loadList()
@@ -265,7 +285,7 @@ final class WikiStore {
 
     /// Index actuel par chemin : les pages inchangées ne sont pas relues.
     var indexCache: [String: SearchEntry] {
-        Dictionary(searchIndex.map { ($0.url.standardizedFileURL.path, $0) }, uniquingKeysWith: { first, _ in first })
+        Dictionary(searchIndex.map { ($0.filePath, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     /// Lit le dossier en arrière-plan, puis applique le résultat sur le fil principal.
@@ -366,7 +386,10 @@ final class WikiStore {
         }
         if let target {
             readFile(target)
-            if let node = selectedNode { recordRecent(node.url) }
+            if let node = selectedNode {
+                recordRecent(node.url)
+                recordHistory(node.id)
+            }
             applyPendingJump(for: target) // résultat de Cmd+K : on arrive sur le texte cherché
         } else {
             closeFile()
@@ -443,7 +466,45 @@ final class WikiStore {
 
     func node(at url: URL?) -> WikiNode? {
         guard let path = url?.standardizedFileURL.path else { return nil }
-        return find(path, in: nodes)
+        return nodesByPath[path]
+    }
+
+    /// Nœud dont la page affichée est ce fichier (page normale ou index.md d'un dossier).
+    func node(forPage url: URL) -> WikiNode? {
+        nodesByPage[url.standardizedFileURL.path]
+    }
+
+    private func rebuildNodeIndex() {
+        var byPath: [String: WikiNode] = [:]
+        var byPage: [String: WikiNode] = [:]
+        var order: [URL] = []
+        var options: [DashboardFolderOption] = []
+        let rootCount = rootURL?.standardizedFileURL.pathComponents.count ?? 0
+        func walk(_ list: [WikiNode], depth: Int, inTemplates: Bool) {
+            for node in list {
+                let standardized = node.url.standardizedFileURL
+                byPath[standardized.path] = node
+                if let page = node.pageURL {
+                    let pagePath = page.standardizedFileURL.path
+                    if byPage[pagePath] == nil { byPage[pagePath] = node }
+                    order.append(node.id)
+                }
+                var templates = inTemplates
+                if node.isFolder {
+                    templates = inTemplates || SearchEngine.isTemplatesFolder(node.url.lastPathComponent)
+                    if !templates, rootCount > 0 {
+                        let path = standardized.pathComponents.dropFirst(rootCount).joined(separator: "/")
+                        options.append(DashboardFolderOption(path: path, label: String(repeating: "   ", count: depth) + node.name))
+                    }
+                }
+                if let children = node.children { walk(children, depth: depth + 1, inTemplates: templates) }
+            }
+        }
+        walk(nodes, depth: 0, inTemplates: false)
+        nodesByPath = byPath
+        nodesByPage = byPage
+        pageOrder = order
+        folderOptionsCache = options
     }
 
     /// Enfants directs d'un dossier (la racine comprise).
@@ -464,11 +525,4 @@ final class WikiStore {
         }
     }
 
-    private func find(_ path: String, in list: [WikiNode]) -> WikiNode? {
-        for node in list {
-            if node.url.standardizedFileURL.path == path { return node }
-            if let children = node.children, let found = find(path, in: children) { return found }
-        }
-        return nil
-    }
 }

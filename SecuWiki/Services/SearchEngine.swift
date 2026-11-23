@@ -3,6 +3,8 @@ import Foundation
 /// Une page dans l'index de recherche (construit en mémoire, aucune base de données).
 struct SearchEntry: Identifiable {
     let url: URL
+    /// Chemin normalisé du fichier, calculé une fois (comparé partout : liens, filtres, carte…).
+    let filePath: String
     let title: String
     /// Fil d'Ariane : "Réseau › Nmap".
     let path: String
@@ -77,6 +79,7 @@ struct SearchEntry: Identifiable {
         }
 
         self.url = url
+        self.filePath = url.standardizedFileURL.path
         self.title = title
         self.path = path
         self.imagePaths = imagePaths

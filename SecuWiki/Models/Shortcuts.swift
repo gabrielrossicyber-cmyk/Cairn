@@ -131,6 +131,8 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Codable {
     case bold, italic, inlineCode, insertTable, insertCode
     // Page
     case search, dashboard, exam, linkMap, modePreview, modeEdit, modeSplit, outline, focusMode, favorite, lock, reload
+    // Aller
+    case goBack, goForward, previousPage, nextPage
     // Partout
     case quickCapture
 
@@ -164,6 +166,10 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Codable {
         case .favorite: "Ajouter / retirer des favoris"
         case .lock: "Verrouiller la page"
         case .reload: "Rafraîchir"
+        case .goBack: "Page précédemment ouverte"
+        case .goForward: "Page suivante dans l'historique"
+        case .previousPage: "Page au-dessus dans l'arborescence"
+        case .nextPage: "Page en dessous dans l'arborescence"
         case .quickCapture: "Capture rapide"
         }
     }
@@ -172,6 +178,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Codable {
         case file = "Fichier"
         case format = "Format (éditeur)"
         case page = "Page"
+        case go = "Aller"
         case global = "Partout, même quand Cairn n'est pas au premier plan"
     }
 
@@ -180,6 +187,7 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Codable {
         case .newPage, .newFolder, .importDocuments, .newWiki, .openWiki, .save, .exportPDF, .printPage, .exportWiki: .file
         case .bold, .italic, .inlineCode, .insertTable, .insertCode: .format
         case .quickCapture: .global
+        case .goBack, .goForward, .previousPage, .nextPage: .go
         default: .page
         }
     }
@@ -215,6 +223,10 @@ enum ShortcutAction: String, CaseIterable, Identifiable, Codable {
         case .favorite: KeyCombo("d")
         case .lock: KeyCombo("l")
         case .reload: KeyCombo("r")
+        case .goBack: KeyCombo("left", control: true)
+        case .goForward: KeyCombo("right", control: true)
+        case .previousPage: KeyCombo("up", control: true)
+        case .nextPage: KeyCombo("down", control: true)
         case .quickCapture: KeyCombo("n", command: false, option: true, control: true, keyCode: kVK_ANSI_N)
         }
     }

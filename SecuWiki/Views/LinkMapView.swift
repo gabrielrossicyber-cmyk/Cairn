@@ -92,7 +92,7 @@ struct LinkMapView: View {
 
     private func title(for url: URL) -> String {
         let path = url.standardizedFileURL.path
-        return store.searchIndex.first { $0.url.standardizedFileURL.path == path }?.title
+        return store.searchIndex.first { $0.filePath == path }?.title
             ?? url.deletingPathExtension().lastPathComponent
     }
 }

@@ -30,6 +30,28 @@ Raccourcis par défaut ci-dessous. Tous se changent dans **Réglages › Raccour
 | Clic droit | Renommer, déplacer, monter/descendre, corbeille, afficher dans le Finder |
 | Glisser-déposer | Déplacer une page ou un dossier dans un autre dossier |
 
+## Au clavier
+
+| Touche | Effet |
+|---|---|
+| Tab / Maj+Tab | Zone suivante / précédente : arborescence → éditeur → aperçu |
+| ⌃Tab / ⌃⇧Tab | Pareil, depuis l'éditeur (où Tab sert à indenter et aux tableaux) |
+| ↑ ↓ (arborescence) | Page précédente / suivante ; → et ← déplient et replient un dossier |
+| ↩ (arborescence) | Entrer dans la page |
+| ↑ ↓, Espace, ⇞ ⇟ (aperçu) | Faire défiler la page |
+| ⌃⌘← / ⌃⌘→ | Retour / Avancer dans l'historique des pages |
+| ⌃⌘↑ / ⌃⌘↓ | Page au-dessus / en dessous dans l'arborescence, d'où que soit le clavier |
+
+Au lancement, le clavier est dans l'arborescence. Après un résultat de Cmd+K, il est dans la page. Les raccourcis du menu **Aller** se changent dans Réglages › Raccourcis. Pour passer aussi d'un bouton à l'autre avec Tab dans les fenêtres (Nouvelle page, Réglages), active « Navigation au clavier » dans Réglages Système › Clavier.
+
+## Performances
+
+- Aperçu par blocs : pendant la frappe, seuls les blocs modifiés sont reconstruits ; schémas, images et PDF intégrés restent en place (environ 4 fois moins de travail par frappe sur une longue page).
+- Coloration du code mise en cache ; schémas Mermaid déjà dessinés réutilisés.
+- Texte de la page analysé une seule fois par frappe (en-tête, tags, variables), au lieu d'une fois par élément d'interface.
+- Arborescence indexée : retrouver une page ne parcourt plus tout l'arbre.
+- Recherche Cmd+K : résultats calculés une fois par frappe, pas à chaque affichage ni à chaque flèche.
+
 ## Recherche dans la page
 
 - **Cmd+F** : barre de recherche dans la page. En Lecture et en Côte à côte, les résultats sont surlignés dans l'aperçu (sans tenir compte des accents ni des majuscules) ; en Édition, c'est la barre de recherche native de l'éditeur. **Cmd+G** / **Maj+Cmd+G** : résultat suivant / précédent.

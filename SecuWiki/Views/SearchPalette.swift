@@ -11,6 +11,10 @@ struct SearchPalette: View {
     @State private var codeOnly = false
     @State private var selected = 0
     @State private var isTagBrowserPresented = false
+    /// Résultats calculés une fois par changement (texte, filtres, index) et non à chaque affichage
+    /// ou à chaque flèche : la palette reste fluide sur un gros wiki.
+    @State private var results: [SearchResult] = []
+    @State private var scopedCount = 0
     @FocusState private var isFocused: Bool
 
     /// Mots à chercher et tags tapés (« #iam » -> filtre ; « #ia » marche aussi, par début de tag).
@@ -43,13 +47,14 @@ struct SearchPalette: View {
         return entries
     }
 
-    private var results: [SearchResult] {
-        SearchEngine.search(parsedQuery.text, in: scopedEntries, codeOnly: codeOnly, limit: hasFilters ? 200 : 50)
+    private func refresh() {
+        let scoped = scopedEntries
+        scopedCount = scoped.count
+        results = SearchEngine.search(parsedQuery.text, in: scoped, codeOnly: codeOnly, limit: hasFilters ? 200 : 50)
+        selected = min(selected, max(results.count - 1, 0))
     }
 
     var body: some View {
-        let results = self.results
-
         ZStack(alignment: .top) {
             // Clic en dehors : fermeture.
             Color.black.opacity(0.12)
@@ -67,7 +72,7 @@ struct SearchPalette: View {
                         .focused($isFocused)
                         .onSubmit { open(results) }
                         .onKeyPress(.downArrow) {
-                            selected = min(selected + 1, max(self.results.count - 1, 0))
+                            selected = min(selected + 1, max(results.count - 1, 0))
                             return .handled
                         }
                         .onKeyPress(.upArrow) {
@@ -119,7 +124,7 @@ struct SearchPalette: View {
                 }
 
                 Divider()
-                Text("↑↓ naviguer · ↩ ouvrir · #tag filtrer · échap fermer · \(scopedEntries.count) / \(store.searchIndex.count) pages")
+                Text("↑↓ naviguer · ↩ ouvrir · #tag filtrer · échap fermer · \(scopedCount) / \(store.searchIndex.count) pages")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -134,12 +139,14 @@ struct SearchPalette: View {
             .padding(.top, 70)
         }
         .onAppear {
+            refresh()
             DispatchQueue.main.async { isFocused = true }
         }
-        .onChange(of: query) { selected = 0 }
-        .onChange(of: codeOnly) { selected = 0 }
-        .onChange(of: store.searchFolderFilter) { selected = 0 }
-        .onChange(of: store.searchTagFilter) { selected = 0 }
+        .onChange(of: query) { selected = 0; refresh() }
+        .onChange(of: codeOnly) { selected = 0; refresh() }
+        .onChange(of: store.searchFolderFilter) { selected = 0; refresh() }
+        .onChange(of: store.searchTagFilter) { selected = 0; refresh() }
+        .onChange(of: store.searchIndex.count) { refresh() }
         .onExitCommand { close() }
     }
 
@@ -228,10 +235,17 @@ struct SearchPalette: View {
         } else {
             store.openPage(result.entry.url, jumpingTo: target, line: result.line)
         }
-        close()
+        close(openedPage: true)
     }
 
-    private func close() {
+    private func close(openedPage: Bool = false) {
+        // Le clavier revient là où il sert : la page ouverte (↑↓ font défiler), sinon l'arborescence.
+        // (Pas quand la barre « Rechercher dans la page » s'ouvre : elle prend le clavier elle-même.)
+        if openedPage {
+            KeyboardNavigator.shared.focusPage()
+        } else {
+            KeyboardNavigator.shared.focusSidebar()
+        }
         store.isSearchPresented = false
         store.searchTagFilter = nil // le filtre dossier, lui, reste (pratique pour réviser un module)
     }
